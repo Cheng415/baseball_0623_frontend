@@ -347,8 +347,8 @@
 
                 // 更新影片播放區
                 const videoPlayer = $('#video-player');
-                const outputVideoPath = data.output_video_path;
-                videoPlayer.attr('src', `${BACKEND_URL}/${outputVideoPath}`);
+                // The backend now returns a full GCS URL in 'output_video_url'
+                videoPlayer.attr('src', data.output_video_url);
                 videoPlayer.removeClass('hidden');
                 $('#video-placeholder').addClass('hidden');
 
@@ -429,6 +429,9 @@
                                 <button class="view-detail-btn bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-bold py-1 px-3 rounded-md" data-id="${record.id}">
                                     查看細節
                                 </button>
+                                <button class="replay-btn bg-blue-500 hover:bg-blue-600 text-white text-sm font-bold py-1 px-3 rounded-md ml-2" data-id="${record.id}">
+                                    再次回放
+                                </button>
                             </div>
                         `;
                         historyRecordsDiv.append(recordElement);
@@ -440,6 +443,15 @@
                         const selectedRecord = allHistoryData.find(record => record.id === recordId);
                         if (selectedRecord) {
                             displayRecordDetails(selectedRecord);
+                        }
+                    });
+
+                    // 為再次回放按鈕添加事件監聽器
+                    $('.replay-btn').on('click', function() {
+                        const recordId = $(this).data('id');
+                        const selectedRecord = allHistoryData.find(record => record.id === recordId);
+                        if (selectedRecord) {
+                            replay_record(selectedRecord);
                         }
                     });
                 }
@@ -472,6 +484,42 @@
                 軀幹屈曲 (Trunk Flexion at BR): ${record.biomechanics_features.Trunk_flexion_at_BR !== undefined ? record.biomechanics_features.Trunk_flexion_at_BR.toFixed(2) : 'N/A'}<br>
                 軀幹側向屈曲 (Trunk Lateral Flexion at HS): ${record.biomechanics_features.Trunk_lateral_flexion_at_HS !== undefined ? record.biomechanics_features.Trunk_lateral_flexion_at_HS.toFixed(2) : 'N/A'}
             `, 'alert');
+        }
+
+        function replay_record(record) {
+            // Update video player
+            const videoPlayer = $('#video-player');
+            videoPlayer.attr('src', record.video_path);
+            videoPlayer.removeClass('hidden');
+            $('#video-placeholder').addClass('hidden');
+
+            // Update biomechanics features
+            const biomechanics = record.biomechanics_features;
+            $('#release-frame').text(biomechanics.release_frame || 'N/A');
+            $('#landing-frame').text(biomechanics.landing_frame || 'N/A');
+            $('#shoulder-frame').text(biomechanics.shoulder_frame || 'N/A');
+            $('#total-frames').text(biomechanics.total_frames || 'N/A');
+            $('#trunk-flexion-excursion').text(biomechanics.Trunk_flexion_excursion !== undefined ? biomechanics.Trunk_flexion_excursion.toFixed(2) : 'N/A');
+            $('#pelvis-obliquity').text(biomechanics.Pelvis_obliquity_at_FC !== undefined ? biomechanics.Pelvis_obliquity_at_FC.toFixed(2) : 'N/A');
+            $('#trunk-rotation').text(biomechanics.Trunk_rotation_at_BR !== undefined ? biomechanics.Trunk_rotation_at_BR.toFixed(2) : 'N/A');
+            $('#shoulder-abduction').text(biomechanics.Shoulder_abduction_at_BR !== undefined ? biomechanics.Shoulder_abduction_at_BR.toFixed(2) : 'N/A');
+            $('#trunk-flexion').text(biomechanics.Trunk_flexion_at_BR !== undefined ? biomechanics.Trunk_flexion_at_BR.toFixed(2) : 'N/A');
+            $('#trunk-lateral-flexion').text(biomechanics.Trunk_lateral_flexion_at_HS !== undefined ? biomechanics.Trunk_lateral_flexion_at_HS.toFixed(2) : 'N/A');
+
+            // Update model prediction results
+            $('#max-speed-kmh').text(record.max_speed_kmh !== undefined ? record.max_speed_kmh.toFixed(2) : 'N/A');
+            $('#pitch-score').text(record.pitch_score !== undefined ? record.pitch_score : 'N/A');
+            if (record.ball_score !== undefined) {
+                const ballScoreText = record.ball_score > 0.5 ? '好球' : '壞球';
+                $('#ball-score-display').text(ballScoreText);
+                $('#ball-score-raw').text(record.ball_score.toFixed(2));
+            } else {
+                $('#ball-score-display').text('N/A');
+                $('#ball-score-raw').text('N/A');
+            }
+
+            // Scroll to top to see the video and analysis
+            window.scrollTo(0, 0);
         }
 
 
