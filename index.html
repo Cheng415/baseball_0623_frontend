@@ -141,7 +141,7 @@
                         選擇影片檔案
                     </button>
                     <p id="file-name" class="mt-4 text-gray-600"></p>
-                    <p class="mt-2 text-sm text-gray-500">支援 MP4 和 MOV 格式</p>
+                    <p class="mt-2 text-sm text-gray-500">支援 MP4 格式</p>
                 </div>
             </div>
 
@@ -185,7 +185,7 @@
                     <div class="bg-green-100 p-4 rounded-lg shadow-inner">
                         <p class="text-lg">投球分數:</p>
                         <p id="pitch-score" class="text-5xl font-extrabold text-green-700">N/A</p>
-                        <p class="text-sm text-green-600">分 (1-9)</p>
+                        <p class="text-sm text-green-600">分 (1-4)</p>
                     </div>
                     <!-- 新增 ball_score 顯示 -->
                     <div class="bg-yellow-100 p-4 rounded-lg shadow-inner">
@@ -273,7 +273,7 @@
 
     <script>
         // 後端 URL，請替換成您實際的後端 URL
-        const BACKEND_URL = "https://baseball-0623-backend-924124779607.europe-west1.run.app";
+        const BACKEND_URL = "http://127.0.0.1:8080";
 
         let allHistoryData = []; // 儲存所有歷史紀錄數據
 
@@ -413,6 +413,8 @@
                     $('#no-history').remove();
                     $('#view-history-charts').prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
 
+                    allHistoryData.sort((a, b) => b.id - a.id); // Sort by ID descending
+
                     allHistoryData.forEach(record => {
                         const ballScoreStatus = record.ball_score !== undefined ? (record.ball_score > 0.5 ? '好球' : '壞球') : 'N/A';
                         const ballScoreRaw = record.ball_score !== undefined ? record.ball_score.toFixed(2) : 'N/A';
@@ -527,11 +529,11 @@
         function drawPitchScoreHistogram(scores) {
             const ctx = document.getElementById('pitchScoreChart').getContext('2d');
             const scoreCounts = {};
-            for (let i = 1; i <= 9; i++) {
+            for (let i = 1; i <= 4; i++) {
                 scoreCounts[i] = 0;
             }
             scores.forEach(score => {
-                if (score >= 1 && score <= 9) {
+                if (score >= 1 && score <= 4) {
                     scoreCounts[score]++;
                 }
             });
