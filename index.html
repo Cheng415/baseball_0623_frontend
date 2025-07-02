@@ -123,6 +123,34 @@
         </div>
     </div>
 
+    <!-- Edit Modal Structure -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">編輯紀錄</h2>
+            <input type="hidden" id="edit-record-id">
+            <div class="mb-4 text-left">
+                <label for="edit-pitcher-name" class="block text-gray-700 text-sm font-bold mb-2">投手名稱:</label>
+                <input type="text" id="edit-pitcher-name" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+            <div class="mb-4 text-left">
+                <label for="edit-max-speed-kmh" class="block text-gray-700 text-sm font-bold mb-2">最大球速 (km/h):</label>
+                <input type="number" step="0.01" id="edit-max-speed-kmh" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+            <div class="mb-4 text-left">
+                <label for="edit-pitch-score" class="block text-gray-700 text-sm font-bold mb-2">投球分數 (1-4):</label>
+                <input type="number" step="1" min="1" max="4" id="edit-pitch-score" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+            <div class="mb-4 text-left">
+                <label for="edit-ball-score" class="block text-gray-700 text-sm font-bold mb-2">好球/壞球分數 (0-1):</label>
+                <input type="number" step="0.01" min="0" max="1" id="edit-ball-score" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+            <div class="modal-buttons">
+                <button id="saveEditBtn" class="modal-button modal-confirm">儲存</button>
+                <button id="cancelEditBtn" class="modal-button modal-cancel">取消</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay hidden">
         <div class="spinner"></div>
@@ -137,6 +165,10 @@
                 <h2 class="text-2xl font-semibold text-gray-700 mb-4">影片上傳區</h2>
                 <div class="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6 h-80 hover:border-blue-500 transition-colors duration-200">
                     <input type="file" id="video-upload" accept="video/mp4,video/quicktime" class="hidden">
+                    <div class="w-full mb-4">
+                        <label for="pitcher-name-input" class="block text-gray-700 text-sm font-bold mb-2">投手名稱:</label>
+                        <input type="text" id="pitcher-name-input" placeholder="請輸入投手名稱" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    </div>
                     <button id="upload-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105">
                         選擇影片檔案
                     </button>
@@ -221,6 +253,12 @@
         <!-- 資料選擇方式 -->
         <div class="card mb-6">
             <h2 class="text-2xl font-semibold text-gray-700 mb-4">選擇分析紀錄</h2>
+            <div class="mb-4">
+                <label for="filter-pitcher-name" class="block text-gray-700 text-sm font-bold mb-2">篩選投手名稱:</label>
+                <select id="filter-pitcher-name" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    <option value="">所有投手</option>
+                </select>
+            </div>
             <select id="record-selector" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">請選擇一個歷史紀錄</option>
             </select>
@@ -273,7 +311,7 @@
 
     <script>
         // 後端 URL，請替換成您實際的後端 URL
-        const BACKEND_URL = "https://baseball-0623-backend-924124779607.europe-west1.run.app";
+        const BACKEND_URL = "http://127.0.0.1:8080";
 
         let allHistoryData = []; // 儲存所有歷史紀錄數據
 
@@ -324,10 +362,19 @@
             }
 
             const file = fileInput.files[0];
+            const pitcherName = $('#pitcher-name-input').val();
+
+            if (!pitcherName) {
+                await showCustomModal('請輸入投手名稱！', 'alert');
+                $('#loadingOverlay').addClass('hidden');
+                return;
+            }
+
             $('#file-name').text(`已選擇檔案: ${file.name}`);
 
             const formData = new FormData();
             formData.append('video_file', file);
+            formData.append('pitcher_name', pitcherName);
 
             $('#loadingOverlay').removeClass('hidden'); // 顯示 loading 畫面
 
@@ -422,16 +469,25 @@
                             <div class="border border-gray-200 rounded-lg p-3 shadow-sm flex justify-between items-center bg-white">
                                 <div>
                                     <p class="text-sm font-semibold">分析 ID: ${record.id}</p>
+                                    <p class="text-sm text-gray-600">投手名稱: ${record.pitcher_name || 'N/A'}</p>
                                     <p class="text-sm text-gray-600">球速: ${record.max_speed_kmh} km/h</p>
                                     <p class="text-sm text-gray-600">分數: ${record.pitch_score}</p>
                                     <p class="text-sm text-gray-600">好壞球: ${ballScoreStatus} (數值: ${ballScoreRaw})</p>
                                 </div>
-                                <button class="view-detail-btn bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-bold py-1 px-3 rounded-md" data-id="${record.id}">
-                                    查看細節
-                                </button>
-                                <button class="replay-btn bg-blue-500 hover:bg-blue-600 text-white text-sm font-bold py-1 px-3 rounded-md ml-2" data-id="${record.id}">
-                                    再次回放
-                                </button>
+                                <div class="grid grid-cols-2 gap-1 mt-2">
+                                    <button class="view-detail-btn bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs font-bold py-0.5 px-2 rounded-md" data-id="${record.id}">
+                                        查看
+                                    </button>
+                                    <button class="replay-btn bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-0.5 px-2 rounded-md" data-id="${record.id}">
+                                        回放
+                                    </button>
+                                    <button class="edit-btn bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-bold py-0.5 px-2 rounded-md" data-id="${record.id}">
+                                        修改
+                                    </button>
+                                    <button class="delete-btn bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-0.5 px-2 rounded-md" data-id="${record.id}">
+                                        刪除
+                                    </button>
+                                </div>
                             </div>
                         `;
                         historyRecordsDiv.append(recordElement);
@@ -454,6 +510,21 @@
                             replay_record(selectedRecord);
                         }
                     });
+
+                    // 為修改按鈕添加事件監聽器
+                    $('.edit-btn').on('click', function() {
+                        const recordId = $(this).data('id');
+                        const selectedRecord = allHistoryData.find(record => record.id === recordId);
+                        if (selectedRecord) {
+                            editRecord(selectedRecord);
+                        }
+                    });
+
+                    // 為刪除按鈕添加事件監聽器
+                    $('.delete-btn').on('click', function() {
+                        const recordId = $(this).data('id');
+                        deleteRecord(recordId);
+                    });
                 }
             } catch (error) {
                 console.error('載入歷史紀錄失敗:', error);
@@ -468,6 +539,7 @@
 
             const confirmDisplay = await showCustomModal(`
                 <strong>分析 ID:</strong> ${record.id}<br>
+                <strong>投手名稱:</strong> ${record.pitcher_name || 'N/A'}<br>
                 <strong>影片路徑:</strong> ${record.video_path.split('/').pop()}<br>
                 <strong>最大球速:</strong> ${record.max_speed_kmh} km/h<br>
                 <strong>投球分數:</strong> ${record.pitch_score}<br>
@@ -492,6 +564,10 @@
             videoPlayer.attr('src', record.video_path);
             videoPlayer.removeClass('hidden');
             $('#video-placeholder').addClass('hidden');
+
+            // Update pitcher name display (if you have a dedicated spot for it on the main page)
+            // For now, we'll just log it or update a generic info area if available
+            console.log('Replaying record for pitcher:', record.pitcher_name);
 
             // Update biomechanics features
             const biomechanics = record.biomechanics_features;
@@ -522,6 +598,77 @@
             window.scrollTo(0, 0);
         }
 
+        // 刪除紀錄函數
+        async function deleteRecord(recordId) {
+            const confirmDelete = await showCustomModal('確定要刪除這筆紀錄嗎？此操作無法復原。', 'confirm');
+            if (confirmDelete) {
+                try {
+                    const response = await fetch(`${BACKEND_URL}/analyses/${recordId}`, {
+                        method: 'DELETE',
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || '刪除失敗');
+                    }
+
+                    await showCustomModal('紀錄已成功刪除！', 'alert');
+                    loadHistoryRecords(); // 重新載入歷史紀錄
+                } catch (error) {
+                    console.error('刪除紀錄失敗:', error);
+                    await showCustomModal(`刪除紀錄失敗: ${error.message}`, 'alert');
+                }
+            }
+        }
+
+        // 編輯紀錄函數
+        function editRecord(record) {
+            $('#edit-record-id').val(record.id);
+            $('#edit-pitcher-name').val(record.pitcher_name || '');
+            $('#edit-max-speed-kmh').val(record.max_speed_kmh);
+            $('#edit-pitch-score').val(record.pitch_score);
+            $('#edit-ball-score').val(record.ball_score);
+            $('#editModal').css('display', 'flex');
+        }
+
+        // 儲存編輯後的紀錄
+        $('#saveEditBtn').on('click', async function() {
+            const recordId = $('#edit-record-id').val();
+            const updatedData = {
+                pitcher_name: $('#edit-pitcher-name').val(),
+                max_speed_kmh: parseFloat($('#edit-max-speed-kmh').val()),
+                pitch_score: parseInt($('#edit-pitch-score').val()),
+                ball_score: parseFloat($('#edit-ball-score').val()),
+            };
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/analyses/${recordId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(updatedData),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || '更新失敗');
+                }
+
+                $('#editModal').hide();
+                await showCustomModal('紀錄已成功更新！', 'alert');
+                loadHistoryRecords(); // 重新載入歷史紀錄
+            } catch (error) {
+                console.error('更新紀錄失敗:', error);
+                await showCustomModal(`更新紀錄失敗: ${error.message}`, 'alert');
+            }
+        });
+
+        // 取消編輯
+        $('#cancelEditBtn').on('click', function() {
+            $('#editModal').hide();
+        });
+
 
         // 初始化時載入歷史紀錄
         $(document).ready(function() {
@@ -544,22 +691,47 @@
         let biomechanicsPieChartInstance;
         let biomechanicsRadarChartInstance;
 
-        function loadHistoryForCharts() {
+        function loadHistoryForCharts(filterPitcherName = '') {
             const recordSelector = $('#record-selector');
             recordSelector.empty();
             recordSelector.append('<option value="">請選擇一個歷史紀錄</option>');
-            allHistoryData.forEach(record => {
+
+            const pitcherFilterSelector = $('#filter-pitcher-name');
+            pitcherFilterSelector.empty();
+            pitcherFilterSelector.append('<option value="">所有投手</option>');
+
+            const uniquePitchers = [...new Set(allHistoryData.map(record => record.pitcher_name).filter(name => name))];
+            uniquePitchers.sort().forEach(name => {
+                pitcherFilterSelector.append(`<option value="${name}">${name}</option>`);
+            });
+
+            // Set the selected value if a filter is applied
+            if (filterPitcherName) {
+                pitcherFilterSelector.val(filterPitcherName);
+            }
+
+            const filteredHistory = allHistoryData.filter(record => {
+                return filterPitcherName === '' || (record.pitcher_name === filterPitcherName);
+            });
+
+            filteredHistory.forEach(record => {
                 const ballScoreStatus = record.ball_score !== undefined ? (record.ball_score > 0.5 ? '好球' : '壞球') : 'N/A';
                 const ballScoreRaw = record.ball_score !== undefined ? record.ball_score.toFixed(2) : 'N/A';
-                recordSelector.append(`<option value="${record.id}">分析 ID: ${record.id} (球速: ${record.max_speed_kmh} km/h, 分數: ${record.pitch_score}, 好壞球: ${ballScoreStatus})</option>`);
+                recordSelector.append(`<option value="${record.id}">分析 ID: ${record.id} (投手: ${record.pitcher_name || 'N/A'}, 球速: ${record.max_speed_kmh} km/h, 分數: ${record.pitch_score}, 好壞球: ${ballScoreStatus})</option>`);
             });
 
             // 初始化所有圖表為空
             destroyCharts();
-            drawPitchScoreHistogram(allHistoryData.map(r => r.pitch_score));
+            drawPitchScoreHistogram(filteredHistory.map(r => r.pitch_score));
             drawBiomechanicsRadarChart({}); // 繪製空雷達圖
-            updateBallScoreRanking(); // 更新好球/壞球分數排行榜
+            updateBallScoreRanking(filteredHistory); // 更新好球/壞球分數排行榜
         }
+
+        // 篩選投手名稱下拉選單的事件監聽器
+        $('#filter-pitcher-name').on('change', function() {
+            const filterPitcherName = $(this).val();
+            loadHistoryForCharts(filterPitcherName);
+        });
 
         function destroyCharts() {
             if (pitchScoreChartInstance) {
@@ -849,13 +1021,13 @@
         });
 
         // 更新好球/壞球分數排行榜
-        function updateBallScoreRanking() {
+        function updateBallScoreRanking(recordsToRank = allHistoryData) {
             const rankingDiv = $('#ball-score-ranking');
             rankingDiv.empty();
             rankingDiv.append('<p class="text-gray-500 text-center">根據好球分數高低排序</p>');
 
             // 過濾掉沒有 ball_score 的紀錄，並按 ball_score 降序排序
-            const rankedRecords = allHistoryData
+            const rankedRecords = recordsToRank
                 .filter(record => record.ball_score !== undefined)
                 .sort((a, b) => b.ball_score - a.ball_score);
 
@@ -868,6 +1040,7 @@
                         <div class="border border-gray-200 rounded-lg p-3 shadow-sm flex justify-between items-center bg-white">
                             <div>
                                 <p class="text-sm font-semibold">#${index + 1} 分析 ID: ${record.id}</p>
+                                <p class="text-sm text-gray-600">投手: ${record.pitcher_name || 'N/A'}</p>
                                 <p class="text-sm text-gray-600">分數: ${record.ball_score.toFixed(2)} (${ballScoreStatus})</p>
                             </div>
                         </div>
