@@ -108,6 +108,39 @@
             background-color: #f44336;
             color: white;
         }
+        /* Image Modal Specific Styles */
+        #imageModal .modal-content {
+            background: none; /* No background for image modal content */
+            padding: 0;
+            border: none;
+            box-shadow: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative; /* For positioning the close button */
+        }
+        #modalImage {
+            max-width: 90vw; /* Max width of the viewport */
+            max-height: 90vh; /* Max height of the viewport */
+            object-fit: contain;
+        }
+        #closeImageModalBtn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 2rem;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 10001;
+        }
     </style>
 </head>
 <body class="bg-gray-100 p-4">
@@ -120,6 +153,14 @@
                 <button id="modalConfirmBtn" class="modal-button modal-confirm">確認</button>
                 <button id="modalCancelBtn" class="modal-button modal-cancel">取消</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Image Modal Structure -->
+    <div id="imageModal" class="modal">
+        <div class="modal-content" style="max-width: 90%; max-height: 90%; padding: 0; background: none; border: none; box-shadow: none;">
+            <img id="modalImage" src="" alt="放大圖片" class="max-w-full max-h-full object-contain">
+            <button id="closeImageModalBtn" class="absolute top-4 right-4 text-white text-4xl font-bold bg-black bg-opacity-50 rounded-full w-12 h-12 flex items-center justify-center">&times;</button>
         </div>
     </div>
 
@@ -182,6 +223,28 @@
                 <div class="flex items-center justify-center bg-gray-200 rounded-lg h-80 overflow-hidden">
                     <video id="video-player" controls class="w-full h-full object-contain rounded-lg hidden"></video>
                     <p id="video-placeholder" class="text-gray-500">分析完成後將顯示影片</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 關鍵影格顯示區 -->
+        <div class="card mb-6">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">關鍵影格</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="flex flex-col items-center">
+                    <h3 class="text-lg font-medium text-gray-700 mb-2">出手幀</h3>
+                    <img id="release-frame-img" src="" alt="出手幀" class="w-full h-48 object-contain border rounded-lg hidden">
+                    <p id="release-frame-placeholder" class="text-gray-500 mt-2">無出手幀圖片</p>
+                </div>
+                <div class="flex flex-col items-center">
+                    <h3 class="text-lg font-medium text-gray-700 mb-2">踏步幀</h3>
+                    <img id="landing-frame-img" src="" alt="踏步幀" class="w-full h-48 object-contain border rounded-lg hidden">
+                    <p id="landing-frame-placeholder" class="text-gray-500 mt-2">無踏步幀圖片</p>
+                </div>
+                <div class="flex flex-col items-center">
+                    <h3 class="text-lg font-medium text-gray-700 mb-2">肩膀幀</h3>
+                    <img id="shoulder-frame-img" src="" alt="肩膀幀" class="w-full h-48 object-contain border rounded-lg hidden">
+                    <p id="shoulder-frame-placeholder" class="text-gray-500 mt-2">無肩膀幀圖片</p>
                 </div>
             </div>
         </div>
@@ -300,12 +363,61 @@
             </div>
 
             <!-- 好球/壞球分數排行榜 -->
-            <div class="card col-span-1"> <!-- Changed from col-span-full to col-span-1 -->
+            <div class="card col-span-1">
                 <h2 class="text-2xl font-semibold text-gray-700 mb-4">好球/壞球分數排行榜</h2>
                 <div id="ball-score-ranking" class="space-y-2 max-h-96 overflow-y-auto">
                     <p class="text-gray-500 text-center">根據好球分數高低排序</p>
                 </div>
             </div>
+
+            <!-- 運動力學特徵密度圖 -->
+            <div class="card col-span-1">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-4">運動力學特徵密度圖</h2>
+                <select id="biomechanics-density-selector" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4">
+                    <option value="">請選擇一個特徵</option>
+                    <option value="Trunk_flexion_excursion">軀幹屈曲幅度</option>
+                    <option value="Pelvis_obliquity_at_FC">骨盆傾斜度</option>
+                    <option value="Trunk_rotation_at_BR">軀幹旋轉</option>
+                    <option value="Shoulder_abduction_at_BR">肩部外展</option>
+                    <option value="Trunk_flexion_at_BR">軀幹屈曲</option>
+                    <option value="Trunk_lateral_flexion_at_HS">軀幹側向屈曲</option>
+                </select>
+                <div class="chart-container">
+                    <canvas id="biomechanicsDensityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 球速與好壞球分數散點圖 -->
+            <div class="card col-span-1">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-4">球速與好壞球分數散點圖</h2>
+                <div class="chart-container">
+                    <canvas id="speedBallScoreScatterChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 歷史紀錄關鍵影格顯示區 -->
+            <div class="card col-span-full">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-4">歷史紀錄關鍵影格</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="flex flex-col items-center">
+                        <h3 class="text-lg font-medium text-gray-700 mb-2">出手幀</h3>
+                        <img id="history-release-frame-img" src="" alt="出手幀" class="w-full h-48 object-contain border rounded-lg hidden">
+                        <p id="history-release-frame-placeholder" class="text-gray-500 mt-2">無出手幀圖片</p>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <h3 class="text-lg font-medium text-gray-700 mb-2">踏步幀</h3>
+                        <img id="history-landing-frame-img" src="" alt="踏步幀" class="w-full h-48 object-contain border rounded-lg hidden">
+                        <p id="history-landing-frame-placeholder" class="text-gray-500 mt-2">無踏步幀圖片</p>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <h3 class="text-lg font-medium text-gray-700 mb-2">肩膀幀</h3>
+                        <img id="history-shoulder-frame-img" src="" alt="肩膀幀" class="w-full h-48 object-contain border rounded-lg hidden">
+                        <p id="history-shoulder-frame-placeholder" class="text-gray-500 mt-2">無肩膀幀圖片</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
         </div>
     </div>
 
@@ -314,6 +426,20 @@
         const BACKEND_URL = "http://127.0.0.1:8080";
 
         let allHistoryData = []; // 儲存所有歷史紀錄數據
+
+        // 更新關鍵影格圖片 (移至全域範圍)
+        function updateKeyframeImage(imgId, placeholderId, imageUrl) {
+            const imgElement = $(`#${imgId}`);
+            const placeholderElement = $(`#${placeholderId}`);
+            if (imageUrl) {
+                imgElement.attr('src', imageUrl);
+                imgElement.removeClass('hidden');
+                placeholderElement.addClass('hidden');
+            } else {
+                imgElement.addClass('hidden');
+                placeholderElement.removeClass('hidden');
+            }
+        }
 
         // 自定義彈出視窗函數
         function showCustomModal(message, type = 'alert') {
@@ -398,6 +524,12 @@
                 videoPlayer.attr('src', data.output_video_url);
                 videoPlayer.removeClass('hidden');
                 $('#video-placeholder').addClass('hidden');
+
+                
+
+                updateKeyframeImage('release-frame-img', 'release-frame-placeholder', data.release_frame_url);
+                updateKeyframeImage('landing-frame-img', 'landing-frame-placeholder', data.landing_frame_url);
+                updateKeyframeImage('shoulder-frame-img', 'shoulder-frame-placeholder', data.shoulder_frame_url);
 
                 // 更新姿勢評分與運動力學特徵
                 const biomechanics = data.biomechanics_features;
@@ -594,6 +726,10 @@
                 $('#ball-score-raw').text('N/A');
             }
 
+            updateKeyframeImage('release-frame-img', 'release-frame-placeholder', record.release_frame_url);
+            updateKeyframeImage('landing-frame-img', 'landing-frame-placeholder', record.landing_frame_url);
+            updateKeyframeImage('shoulder-frame-img', 'shoulder-frame-placeholder', record.shoulder_frame_url);
+
             // Scroll to top to see the video and analysis
             window.scrollTo(0, 0);
         }
@@ -671,8 +807,27 @@
 
 
         // 初始化時載入歷史紀錄
-        $(document).ready(function() {
-            loadHistoryRecords();
+        $(document).ready(async function() {
+            await loadHistoryRecords();
+
+            // 如果有歷史紀錄，預設載入最新一筆到儀表板
+            if (allHistoryData.length > 0) {
+                replay_record(allHistoryData[0]);
+            }
+
+            // 為所有關鍵影格圖片添加點擊事件監聽器 (主頁和歷史頁)
+            $(document).on('click', '#release-frame-img, #landing-frame-img, #shoulder-frame-img, #history-release-frame-img, #history-landing-frame-img, #history-shoulder-frame-img', function() {
+                const imageUrl = $(this).attr('src');
+                if (imageUrl) {
+                    $('#modalImage').attr('src', imageUrl);
+                    $('#imageModal').css('display', 'flex');
+                }
+            });
+
+            // 關閉圖片模態視窗
+            $('#closeImageModalBtn').on('click', function() {
+                $('#imageModal').hide();
+            });
         });
 
         // 歷史紀錄圖表頁面導航
@@ -690,6 +845,8 @@
         let pitchScoreChartInstance;
         let biomechanicsPieChartInstance;
         let biomechanicsRadarChartInstance;
+        let speedBallScoreScatterChartInstance;
+        let biomechanicsDensityChartInstance;
 
         function loadHistoryForCharts(filterPitcherName = '') {
             const recordSelector = $('#record-selector');
@@ -721,10 +878,43 @@
             });
 
             // 初始化所有圖表為空
+            // 初始化所有圖表為空
             destroyCharts();
             drawPitchScoreHistogram(filteredHistory.map(r => r.pitch_score));
             drawBiomechanicsRadarChart({}); // 繪製空雷達圖
             updateBallScoreRanking(filteredHistory); // 更新好球/壞球分數排行榜
+
+            // 自動選擇並載入最新的歷史紀錄
+            // 自動選擇並載入最新的歷史紀錄
+            if (filteredHistory.length > 0) {
+                const latestRecord = filteredHistory[0];
+                const latestRecordId = latestRecord.id;
+
+                recordSelector.val(latestRecordId);
+                recordSelector.trigger('change'); // Trigger change event to load all charts based on the selected record
+
+                // 自動選擇第一個運動力學特徵並載入圓餅圖
+                const biomechanicsPieSelector = $('#biomechanics-pie-selector');
+                if (biomechanicsPieSelector.find('option').length > 1) { // 確保有除了預設選項以外的特徵
+                    biomechanicsPieSelector.val('Trunk_flexion_excursion'); // 預設選擇軀幹屈曲幅度
+                    biomechanicsPieSelector.trigger('change'); // Trigger change event for pie chart
+                }
+
+                // 自動選擇第一個運動力學特徵並載入密度圖
+                const biomechanicsDensitySelector = $('#biomechanics-density-selector');
+                if (biomechanicsDensitySelector.find('option').length > 1) {
+                    biomechanicsDensitySelector.val('Trunk_flexion_excursion'); // 預設選擇軀幹屈曲幅度
+                    biomechanicsDensitySelector.trigger('change'); // Trigger change event for density chart
+                }
+            } else {
+                // If no records, ensure all charts are cleared
+                drawBiomechanicsRadarChart({});
+                updateKeyframeImage('history-release-frame-img', 'history-release-frame-placeholder', null);
+                updateKeyframeImage('history-landing-frame-img', 'history-landing-frame-placeholder', null);
+                updateKeyframeImage('history-shoulder-frame-img', 'history-shoulder-frame-placeholder', null);
+                drawSpeedBallScoreScatterChart([], null);
+                drawBiomechanicsDensityChart([], 'Trunk_flexion_excursion', null); // Clear density chart as well
+            }
         }
 
         // 篩選投手名稱下拉選單的事件監聽器
@@ -742,6 +932,15 @@
             }
             if (biomechanicsRadarChartInstance) {
                 biomechanicsRadarChartInstance.destroy();
+            }
+            if (speedBallScoreScatterChartInstance) {
+                speedBallScoreScatterChartInstance.destroy();
+            }
+            if (biomechanicsDensityChartInstance) {
+                biomechanicsDensityChartInstance.destroy();
+            }
+            if (biomechanicsDensityChartInstance) {
+                biomechanicsDensityChartInstance.destroy();
             }
         }
 
@@ -822,11 +1021,32 @@
             }
 
             const ctx = document.getElementById('biomechanicsPieChart').getContext('2d');
-            // 這裡的邏輯需要根據實際特徵值的含義來調整，如果特徵值本身就是百分比或有明確上限，則可以這樣計算
-            // 如果特徵值沒有明確上限，則此圓餅圖可能不太適用於直接表示「特徵值和其餘部分」
-            // 為了演示目的，暫時維持原始邏輯，假設是某種完成度或占比
-            const data = [featureValue, 100 - featureValue]; // 簡化為特徵值和其餘部分，用於視覺化
-            const labels = [`${translateFeatureName(featureName)} (${featureValue.toFixed(2)})`, '其他'];
+
+            // Use normalizeValue to get a percentage for the pie chart
+            let normalizedFeatureValue = 0;
+            // Define min/max for each feature for normalization, matching radar chart
+            const featureRanges = {
+                "Trunk_flexion_excursion": { min: 30, max: 90 },
+                "Pelvis_obliquity_at_FC": { min: -10, max: 10 },
+                "Trunk_rotation_at_BR": { min: 100, max: 200 },
+                "Shoulder_abduction_at_BR": { min: 120, max: 180 },
+                "Trunk_flexion_at_BR": { min: -90, max: -30 },
+                "Trunk_lateral_flexion_at_HS": { min: -10, max: 10 }
+            };
+
+            if (featureRanges[featureName]) {
+                normalizedFeatureValue = normalizeValue(
+                    featureValue,
+                    featureRanges[featureName].min,
+                    featureRanges[featureName].max
+                );
+            } else {
+                // Fallback if featureName is not in ranges, or if value is not a number
+                normalizedFeatureValue = (typeof featureValue === 'number' && !isNaN(featureValue)) ? Math.max(0, Math.min(100, featureValue)) : 0;
+            }
+
+            const data = [normalizedFeatureValue, 100 - normalizedFeatureValue];
+            const labels = [`${translateFeatureName(featureName)} (${featureValue !== undefined ? featureValue.toFixed(2) : 'N/A'})`, '剩餘範圍'];
             const backgroundColors = ['rgba(255, 99, 132, 0.6)', 'rgba(200, 200, 200, 0.6)'];
             const borderColors = ['rgba(255, 99, 132, 1)', 'rgba(200, 200, 200, 1)'];
 
@@ -850,7 +1070,7 @@
                         },
                         title: {
                             display: true,
-                            text: `${translateFeatureName(featureName)} 分佈`
+                            text: `${translateFeatureName(featureName)} 在標準範圍內的比例`
                         },
                         datalabels: {
                             formatter: (value, ctx) => {
@@ -958,6 +1178,230 @@
             return Math.max(0, Math.min(100, ((value - minRange) / (maxRange - minRange)) * 100));
         }
 
+        // 運動力學特徵密度圖
+        function drawBiomechanicsDensityChart(allRecords, selectedFeature, selectedRecordId = null) {
+            if (biomechanicsDensityChartInstance) {
+                biomechanicsDensityChartInstance.destroy();
+            }
+
+            const ctx = document.getElementById('biomechanicsDensityChart').getContext('2d');
+
+            if (!selectedFeature) {
+                return; // No feature selected, do nothing
+            }
+
+            const featureValues = allRecords
+                .map(record => record.biomechanics_features ? record.biomechanics_features[selectedFeature] : undefined)
+                .filter(value => value !== undefined && value !== null);
+
+            if (featureValues.length === 0) {
+                return; // No data for this feature
+            }
+
+            // Calculate histogram data for density plot
+            const binCount = 10; // Number of bins for the histogram
+            const minVal = Math.min(...featureValues);
+            const maxVal = Math.max(...featureValues);
+            const binWidth = (maxVal - minVal) / binCount;
+
+            const bins = Array(binCount).fill(0);
+            const labels = [];
+
+            for (let i = 0; i < binCount; i++) {
+                const lowerBound = minVal + i * binWidth;
+                const upperBound = minVal + (i + 1) * binWidth;
+                labels.push(`${lowerBound.toFixed(1)}-${upperBound.toFixed(1)}`);
+                bins[i] = featureValues.filter(v => v >= lowerBound && (i === binCount - 1 ? v <= upperBound : v < upperBound)).length;
+            }
+
+            // Normalize bins to represent density (optional, but good for comparison)
+            const totalCount = featureValues.length;
+            const densityData = bins.map(count => (count / totalCount) * 100); // Percentage density
+
+            const datasets = [{
+                label: '所有紀錄密度',
+                data: densityData,
+                backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1,
+                fill: true
+            }];
+
+            // Add selected record's position as a vertical line
+            if (selectedRecordId) {
+                const selectedRecord = allRecords.find(record => record.id == parseInt(selectedRecordId));
+                if (selectedRecord && selectedRecord.biomechanics_features && selectedRecord.biomechanics_features[selectedFeature] !== undefined) {
+                    const selectedValue = selectedRecord.biomechanics_features[selectedFeature];
+                    // Find which bin the selected value falls into
+                    let selectedBinIndex = -1;
+                    for (let i = 0; i < binCount; i++) {
+                        const lowerBound = minVal + i * binWidth;
+                        const upperBound = minVal + (i + 1) * binWidth;
+                        if (selectedValue >= lowerBound && (i === binCount - 1 ? selectedValue <= upperBound : selectedValue < upperBound)) {
+                            selectedBinIndex = i;
+                            break;
+                        }
+                    }
+
+                    if (selectedBinIndex !== -1) {
+                        datasets.push({
+                            label: '當前紀錄',
+                            data: Array(binCount).fill(null).map((_, i) => i === selectedBinIndex ? densityData[selectedBinIndex] : null), // Only show point at selected bin
+                            backgroundColor: 'red',
+                            borderColor: 'red',
+                            pointRadius: 8,
+                            pointHoverRadius: 10,
+                            type: 'line', // Use line type for the marker
+                            fill: false,
+                            showLine: false // Don't draw a line between points
+                        });
+                    }
+                }
+            }
+
+            biomechanicsDensityChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: translateFeatureName(selectedFeature)
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '密度 (%)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: `${translateFeatureName(selectedFeature)} 分佈密度圖`
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if (context.dataset.label === '當前紀錄') {
+                                        const selectedRecord = allRecords.find(record => record.id == selectedRecordId);
+                                        return `當前紀錄值: ${selectedRecord.biomechanics_features[selectedFeature].toFixed(2)}`;
+                                    } else {
+                                        return `${context.dataset.label}: ${context.formattedValue}%`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 球速與好壞球分數散點圖
+function drawSpeedBallScoreScatterChart(allRecords, selectedRecordId) {
+    if (speedBallScoreScatterChartInstance) {
+        speedBallScoreScatterChartInstance.destroy();
+    }
+
+    const ctx = document.getElementById('speedBallScoreScatterChart').getContext('2d');
+
+    const scatterData = allRecords
+        .filter(record => record.max_speed_kmh !== undefined && record.ball_score !== undefined)
+        .map(record => ({
+            x: record.max_speed_kmh.toFixed(2),
+            y: record.ball_score,
+            id: record.id,
+            pitcher_name: record.pitcher_name
+        }));
+
+    console.log("All filtered scatter data:", scatterData); // Check what's in scatterData
+    console.log("Selected record ID received:", selectedRecordId); // Check if selectedRecordId is passed
+
+    const datasets = [{
+        label: '所有紀錄',
+        data: scatterData.filter(d => d.id !== parseInt(selectedRecordId)),
+        backgroundColor: 'rgba(153, 102, 255, 0.6)',
+        borderColor: 'rgba(153, 102, 255, 1)',
+        pointRadius: 5,
+        pointHoverRadius: 7,
+    }];
+
+    if (selectedRecordId) {
+        const selectedRecordData = scatterData.find(d => d.id === parseInt(selectedRecordId));
+        console.log("Found selected record data:", selectedRecordData); // Check if the selected record is found
+        if (selectedRecordData) {
+            datasets.push({
+                label: '當前紀錄',
+                data: [selectedRecordData],
+                backgroundColor: 'red',
+                borderColor: 'darkred',
+                pointRadius: 8,
+                pointHoverRadius: 10,
+            });
+        } else {
+            console.warn(`Selected record with ID ${selectedRecordId} not found in filtered data.`);
+        }
+    }
+
+    speedBallScoreScatterChartInstance = new Chart(ctx, {
+        type: 'scatter',
+        data: {
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    type: 'linear',
+                    position: 'bottom',
+                    title: {
+                        display: true,
+                        text: '最大球速 (km/h)'
+                    }
+                },
+                y: {
+                    type: 'linear',
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: '好球/壞球分數 (0-1)'
+                    },
+                    min: 0,
+                    max: 1
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: true,
+                    text: '球速與好壞球分數散點圖'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const record = context.raw;
+                            return `投手: ${record.pitcher_name}, 球速: ${record.x} km/h, 好壞球分數: ${record.y.toFixed(2)}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
 
         // 特徵名稱翻譯
         function translateFeatureName(englishName) {
@@ -979,15 +1423,42 @@
                 const selectedRecord = allHistoryData.find(record => record.id == selectedId);
                 if (selectedRecord) {
                     drawBiomechanicsRadarChart(selectedRecord.biomechanics_features);
-                    // 當選擇單一紀錄時，清空圓餅圖選擇，並銷毀圓餅圖實例
-                    $('#biomechanics-pie-selector').val('');
-                    if (biomechanicsPieChartInstance) {
-                        biomechanicsPieChartInstance.destroy();
+                    // 當選擇單一紀錄時，預設載入軀幹屈曲幅度到圓餅圖
+                    $('#biomechanics-pie-selector').val('Trunk_flexion_excursion');
+                    $('#biomechanics-pie-selector').trigger('change');
+                    
+                    // 當選擇單一紀錄時，預設載入軀幹屈曲幅度到密度圖
+                    $('#biomechanics-density-selector').val('Trunk_flexion_excursion');
+                    $('#biomechanics-density-selector').trigger('change');
+
+                    // 更新歷史紀錄關鍵影格圖片
+                    updateKeyframeImage('history-release-frame-img', 'history-release-frame-placeholder', selectedRecord.release_frame_url);
+                    updateKeyframeImage('history-landing-frame-img', 'history-landing-frame-placeholder', selectedRecord.landing_frame_url);
+                    updateKeyframeImage('history-shoulder-frame-img', 'history-shoulder-frame-placeholder', selectedRecord.shoulder_frame_url);
+
+                    // 更新散點圖 (標記當前選中的紀錄)
+                    drawSpeedBallScoreScatterChart(allHistoryData, selectedId);
+
+                    // 更新密度圖 (標記當前選中的紀錄)
+                    const selectedDensityFeature = $('#biomechanics-density-selector').val();
+                    if (selectedDensityFeature) {
+                        drawBiomechanicsDensityChart(allHistoryData, selectedDensityFeature, selectedId);
                     }
+
                 }
             } else {
                 // 如果沒有選擇紀錄，清除雷達圖
                 drawBiomechanicsRadarChart({});
+                // 清除歷史紀錄關鍵影格圖片
+                updateKeyframeImage('history-release-frame-img', 'history-release-frame-placeholder', null);
+                updateKeyframeImage('history-landing-frame-img', 'history-landing-frame-placeholder', null);
+                updateKeyframeImage('history-shoulder-frame-img', 'history-shoulder-frame-placeholder', null);
+                // 清除密度圖
+                if (biomechanicsDensityChartInstance) {
+                    biomechanicsDensityChartInstance.destroy();
+                }
+                // 清除散點圖
+                drawSpeedBallScoreScatterChart([], null);
             }
         });
 
@@ -1016,6 +1487,26 @@
             } else {
                 if (biomechanicsPieChartInstance) {
                     biomechanicsPieChartInstance.destroy();
+                }
+            }
+        });
+
+        // 密度圖選擇特徵後更新圖表
+        $('#biomechanics-density-selector').on('change', function() {
+            const selectedFeature = $(this).val();
+            const selectedRecordId = $('#record-selector').val();
+
+            if (!selectedRecordId) {
+                showCustomModal('請先選擇一個歷史紀錄', 'alert');
+                $(this).val(''); // 重置選擇
+                return;
+            }
+
+            if (selectedFeature) {
+                drawBiomechanicsDensityChart(allHistoryData, selectedFeature, selectedRecordId);
+            } else {
+                if (biomechanicsDensityChartInstance) {
+                    biomechanicsDensityChartInstance.destroy();
                 }
             }
         });
