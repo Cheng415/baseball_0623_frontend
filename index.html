@@ -500,7 +500,7 @@
 
             const formData = new FormData();
             formData.append('video_file', file);
-            formData.append('pitcher_name', pitcherName);
+            formData.append('player_name', pitcherName);
 
             $('#loadingOverlay').removeClass('hidden'); // 顯示 loading 畫面
 
@@ -596,7 +596,7 @@
 
                     allHistoryData.forEach(record => {
                         const ballScoreStatus = record.ball_score !== undefined ? (record.ball_score > 0.5 ? '好球' : '壞球') : 'N/A';
-                        const ballScoreRaw = record.ball_score !== undefined ? record.ball_score.toFixed(2) : 'N/A';
+                        const ballScoreRaw = record.ball_score != null ? record.ball_score.toFixed(2) : 'N/A';
                         const recordElement = `
                             <div class="border border-gray-200 rounded-lg p-3 shadow-sm flex justify-between items-center bg-white">
                                 <div>
@@ -667,12 +667,12 @@
         // 顯示單一歷史紀錄的詳細資訊
         async function displayRecordDetails(record) {
             const ballScoreStatus = record.ball_score !== undefined ? (record.ball_score > 0.5 ? '好球' : '壞球') : 'N/A';
-            const ballScoreRaw = record.ball_score !== undefined ? record.ball_score.toFixed(2) : 'N/A';
+            const ballScoreRaw = record.ball_score != null ? record.ball_score.toFixed(2) : 'N/A';
 
             const confirmDisplay = await showCustomModal(`
                 <strong>分析 ID:</strong> ${record.id}<br>
                 <strong>投手名稱:</strong> ${record.pitcher_name || 'N/A'}<br>
-                <strong>影片路徑:</strong> ${record.video_path.split('/').pop()}<br>
+                <strong>影片路徑:</strong> ${record.video_path ? record.video_path.split('/').pop() : 'N/A'}<br>
                 <strong>最大球速:</strong> ${record.max_speed_kmh} km/h<br>
                 <strong>投球分數:</strong> ${record.pitch_score}<br>
                 <strong>好球/壞球判斷:</strong> ${ballScoreStatus} (數值: ${ballScoreRaw})<br><br>
@@ -715,9 +715,9 @@
             $('#trunk-lateral-flexion').text(biomechanics.Trunk_lateral_flexion_at_HS !== undefined ? biomechanics.Trunk_lateral_flexion_at_HS.toFixed(2) : 'N/A');
 
             // Update model prediction results
-            $('#max-speed-kmh').text(record.max_speed_kmh !== undefined ? record.max_speed_kmh.toFixed(2) : 'N/A');
-            $('#pitch-score').text(record.pitch_score !== undefined ? record.pitch_score : 'N/A');
-            if (record.ball_score !== undefined) {
+            $('#max-speed-kmh').text(record.max_speed_kmh != null ? record.max_speed_kmh.toFixed(2) : 'N/A');
+            $('#pitch-score').text(record.pitch_score != null ? record.pitch_score : 'N/A');
+            if (record.ball_score != null) {
                 const ballScoreText = record.ball_score > 0.5 ? '好球' : '壞球';
                 $('#ball-score-display').text(ballScoreText);
                 $('#ball-score-raw').text(record.ball_score.toFixed(2));
@@ -873,7 +873,7 @@
 
             filteredHistory.forEach(record => {
                 const ballScoreStatus = record.ball_score !== undefined ? (record.ball_score > 0.5 ? '好球' : '壞球') : 'N/A';
-                const ballScoreRaw = record.ball_score !== undefined ? record.ball_score.toFixed(2) : 'N/A';
+                const ballScoreRaw = record.ball_score != null ? record.ball_score.toFixed(2) : 'N/A';
                 recordSelector.append(`<option value="${record.id}">分析 ID: ${record.id} (投手: ${record.pitcher_name || 'N/A'}, 球速: ${record.max_speed_kmh} km/h, 分數: ${record.pitch_score}, 好壞球: ${ballScoreStatus})</option>`);
             });
 
