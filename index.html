@@ -1,1546 +1,1707 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>棒球投手分析儀表板</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- jQuery CDN -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <!-- Chart.js CDN for statistics charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Chart.js Radar Chart plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5;
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: #f8f9fa;
+      }
+      .card {
+        background-color: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        padding: 24px;
+      }
+      .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        color: white;
+        font-size: 1.5rem;
+        flex-direction: column;
+      }
+      .spinner {
+        border: 8px solid rgba(255, 255, 255, 0.3);
+        border-top: 8px solid #3498db;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        animation: spin 2s linear infinite;
+        margin-bottom: 20px;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
         }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
+        100% {
+          transform: rotate(360deg);
         }
-        .card {
-            background-color: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            padding: 24px;
-            margin-bottom: 20px;
-        }
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            color: white;
-            font-size: 1.5rem;
-            flex-direction: column;
-        }
-        .spinner {
-            border: 8px solid rgba(255, 255, 255, 0.3);
-            border-top: 8px solid #3498db;
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            animation: spin 2s linear infinite;
-            margin-bottom: 20px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .chart-container {
-            position: relative;
-            height: 400px;
-            width: 100%;
-            margin-top: 20px;
-        }
-        /* Custom modal styles */
-        .modal {
-            display: none; /* Hidden by default */
-            position: fixed; /* Stay in place */
-            z-index: 10000; /* Sit on top */
-            left: 0;
-            top: 0;
-            width: 100%; /* Full width */
-            height: 100%; /* Full height */
-            overflow: auto; /* Enable scroll if needed */
-            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
-            justify-content: center;
-            align-items: center;
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-            max-width: 500px;
-            border-radius: 12px;
-            text-align: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
-        .modal-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        .modal-button {
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        .modal-confirm {
-            background-color: #4CAF50;
-            color: white;
-        }
-        .modal-cancel {
-            background-color: #f44336;
-            color: white;
-        }
-        /* Image Modal Specific Styles */
-        #imageModal .modal-content {
-            background: none; /* No background for image modal content */
-            padding: 0;
-            border: none;
-            box-shadow: none;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative; /* For positioning the close button */
-        }
-        #modalImage {
-            max-width: 90vw; /* Max width of the viewport */
-            max-height: 90vh; /* Max height of the viewport */
-            object-fit: contain;
-        }
-        #closeImageModalBtn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background-color: rgba(0, 0, 0, 0.5);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            font-size: 2rem;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            z-index: 10001;
-        }
+      }
+      .bullet-chart-container {
+        position: relative;
+        width: 100%;
+        height: 16px;
+        background-color: #e5e7eb;
+        border-radius: 8px;
+      }
+      .bullet-chart-range {
+        position: absolute;
+        height: 100%;
+        background-color: #d1d5db;
+        border-radius: 8px;
+      }
+      .bullet-chart-median {
+        position: absolute;
+        width: 2px;
+        height: 100%;
+        background-color: #ffffff;
+      }
+      .bullet-chart-marker {
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        background-color: #3b82f6;
+        border-radius: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        border: 2px solid white;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+      }
+      .density-plot-container {
+        position: relative;
+        width: 100%;
+        height: 16px;
+        display: flex;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .density-zone {
+        height: 100%;
+      }
+      .density-marker {
+        position: absolute;
+        width: 2px;
+        height: 24px;
+        background-color: #ef4444;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 10000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.6);
+        justify-content: center;
+        align-items: center;
+      }
+      .modal-content {
+        background-color: #fefefe;
+        margin: auto;
+        padding: 24px;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 900px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      }
+      .tab-button {
+        padding: 8px 16px;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        white-space: nowrap;
+      }
+      .tab-button.active {
+        border-color: #3b82f6;
+        color: #3b82f6;
+        font-weight: 600;
+      }
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
+      }
+      .chart-selector {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007AFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.7em top 50%;
+        background-size: 0.65em auto;
+        padding-right: 2.5em;
+      }
+      #imageModal .modal-content {
+        background: none;
+        padding: 0;
+        border: none;
+        box-shadow: none;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        width: auto;
+        height: auto;
+      }
+      #modalImage {
+        max-width: 90vw;
+        max-height: 90vh;
+        object-fit: contain;
+      }
+      #closeImageModalBtn {
+        position: absolute;
+        top: 15px;
+        right: 25px;
+        background-color: rgba(0, 0, 0, 0.5);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        font-size: 2rem;
+        line-height: 1;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        z-index: 10001;
+      }
+      /* --- 表格樣式 --- */
+      .data-table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 14px;
+      }
+      .data-table th,
+      .data-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: center;
+      }
+      .data-table thead th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        padding: 10px 8px;
+      }
+      .data-table tbody th {
+        background-color: #f8f9fa;
+        text-align: left;
+        font-weight: 600;
+      }
+      .correlation-table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 12px;
+      }
+      .correlation-table th,
+      .correlation-table td {
+        border: 1px solid #ddd;
+        padding: 6px;
+        text-align: center;
+        min-width: 60px;
+      }
+      .correlation-table thead th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        writing-mode: vertical-lr;
+        text-orientation: mixed;
+        padding: 8px 4px;
+        height: 120px;
+        vertical-align: bottom;
+      }
+      .correlation-table thead th.corner {
+        writing-mode: horizontal-tb;
+        background-color: #fff;
+        border: none;
+      }
+      .correlation-table tbody th {
+        background-color: #f8f9fa;
+        text-align: left;
+        font-weight: 600;
+        padding-left: 8px;
+      }
+      /* --- Tooltip 樣式 --- */
+      .tooltip {
+        position: relative;
+        display: inline-block;
+        cursor: pointer;
+        border-bottom: 1px dotted black;
+      }
+
+      .tooltip .tooltiptext {
+        visibility: hidden;
+        width: 350px; /* 加寬以容納更多文字 */
+        background-color: #333; /* 加深背景色 */
+        color: #fff;
+        text-align: left; /* 文字靠左對齊 */
+        border-radius: 6px;
+        padding: 10px;
+        position: absolute;
+        z-index: 100; /* 確保在最上層 */
+        bottom: 125%;
+        left: 50%;
+        margin-left: -175px;
+        opacity: 0;
+        transition: opacity 0.3s;
+        font-size: 14px;
+        line-height: 1.6; /* 增加行高 */
+      }
+
+      .tooltip:hover .tooltiptext {
+        visibility: visible;
+        opacity: 1;
+      }
     </style>
-</head>
-<body class="bg-gray-100 p-4">
-
-    <!-- Custom Modal Structure -->
-    <div id="customModal" class="modal">
-        <div class="modal-content">
-            <p id="modalMessage" class="text-lg mb-4"></p>
-            <div class="modal-buttons">
-                <button id="modalConfirmBtn" class="modal-button modal-confirm">確認</button>
-                <button id="modalCancelBtn" class="modal-button modal-cancel">取消</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Image Modal Structure -->
-    <div id="imageModal" class="modal">
-        <div class="modal-content" style="max-width: 90%; max-height: 90%; padding: 0; background: none; border: none; box-shadow: none;">
-            <img id="modalImage" src="" alt="放大圖片" class="max-w-full max-h-full object-contain">
-            <button id="closeImageModalBtn" class="absolute top-4 right-4 text-white text-4xl font-bold bg-black bg-opacity-50 rounded-full w-12 h-12 flex items-center justify-center">&times;</button>
-        </div>
-    </div>
-
-    <!-- Edit Modal Structure -->
-    <div id="editModal" class="modal">
-        <div class="modal-content">
-            <h2 class="text-2xl font-semibold text-gray-700 mb-4">編輯紀錄</h2>
-            <input type="hidden" id="edit-record-id">
-            <div class="mb-4 text-left">
-                <label for="edit-pitcher-name" class="block text-gray-700 text-sm font-bold mb-2">投手名稱:</label>
-                <input type="text" id="edit-pitcher-name" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-            </div>
-            <div class="mb-4 text-left">
-                <label for="edit-max-speed-kmh" class="block text-gray-700 text-sm font-bold mb-2">最大球速 (km/h):</label>
-                <input type="number" step="0.01" id="edit-max-speed-kmh" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-            </div>
-            <div class="mb-4 text-left">
-                <label for="edit-pitch-score" class="block text-gray-700 text-sm font-bold mb-2">投球分數 (1-4):</label>
-                <input type="number" step="1" min="1" max="4" id="edit-pitch-score" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-            </div>
-            <div class="mb-4 text-left">
-                <label for="edit-ball-score" class="block text-gray-700 text-sm font-bold mb-2">好球/壞球分數 (0-1):</label>
-                <input type="number" step="0.01" min="0" max="1" id="edit-ball-score" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-            </div>
-            <div class="modal-buttons">
-                <button id="saveEditBtn" class="modal-button modal-confirm">儲存</button>
-                <button id="cancelEditBtn" class="modal-button modal-cancel">取消</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Loading Overlay -->
+  </head>
+  <body class="p-4">
     <div id="loadingOverlay" class="loading-overlay hidden">
-        <div class="spinner"></div>
-        <p>影片分析中，請稍候...</p>
+      <div class="spinner"></div>
+      <p>影片分析中，請稍候...</p>
     </div>
-
-    <div id="mainPage" class="container">
-        <h1 class="text-4xl font-bold text-center text-gray-800 mb-8">棒球投手分析儀表板</h1>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div class="card col-span-1">
-                <h2 class="text-2xl font-semibold text-gray-700 mb-4">影片上傳區</h2>
-                <div class="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6 h-80 hover:border-blue-500 transition-colors duration-200">
-                    <input type="file" id="video-upload" accept="video/mp4,video/quicktime" class="hidden">
-                    <div class="w-full mb-4">
-                        <label for="pitcher-name-input" class="block text-gray-700 text-sm font-bold mb-2">投手名稱:</label>
-                        <input type="text" id="pitcher-name-input" placeholder="請輸入投手名稱" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                    </div>
-                    <button id="upload-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105">
-                        選擇影片檔案
-                    </button>
-                    <p id="file-name" class="mt-4 text-gray-600"></p>
-                    <p class="mt-2 text-sm text-gray-500">支援 MP4 格式</p>
-                </div>
-            </div>
-
-            <div class="card col-span-1">
-                <h2 class="text-2xl font-semibold text-gray-700 mb-4">影片播放區</h2>
-                <div class="flex items-center justify-center bg-gray-200 rounded-lg h-80 overflow-hidden">
-                    <video id="video-player" controls class="w-full h-full object-contain rounded-lg hidden"></video>
-                    <p id="video-placeholder" class="text-gray-500">分析完成後將顯示影片</p>
-                </div>
-            </div>
+    <div id="imageModal" class="modal">
+      <div class="modal-content">
+        <img id="modalImage" src="" alt="放大圖片" />
+        <button id="closeImageModalBtn">&times;</button>
+      </div>
+    </div>
+    <div id="detailModal" class="modal">
+      <div class="modal-content">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-2xl font-bold text-gray-800">紀錄詳情</h2>
+          <button
+            id="closeDetailModal"
+            class="text-gray-500 hover:text-gray-800 text-3xl"
+          >
+            &times;
+          </button>
         </div>
-
-        <!-- 關鍵影格顯示區 -->
-        <div class="card mb-6">
-            <h2 class="text-2xl font-semibold text-gray-700 mb-4">關鍵影格</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="flex flex-col items-center">
-                    <h3 class="text-lg font-medium text-gray-700 mb-2">出手幀</h3>
-                    <img id="release-frame-img" src="" alt="出手幀" class="w-full h-48 object-contain border rounded-lg hidden">
-                    <p id="release-frame-placeholder" class="text-gray-500 mt-2">無出手幀圖片</p>
-                </div>
-                <div class="flex flex-col items-center">
-                    <h3 class="text-lg font-medium text-gray-700 mb-2">踏步幀</h3>
-                    <img id="landing-frame-img" src="" alt="踏步幀" class="w-full h-48 object-contain border rounded-lg hidden">
-                    <p id="landing-frame-placeholder" class="text-gray-500 mt-2">無踏步幀圖片</p>
-                </div>
-                <div class="flex flex-col items-center">
-                    <h3 class="text-lg font-medium text-gray-700 mb-2">肩膀幀</h3>
-                    <img id="shoulder-frame-img" src="" alt="肩膀幀" class="w-full h-48 object-contain border rounded-lg hidden">
-                    <p id="shoulder-frame-placeholder" class="text-gray-500 mt-2">無肩膀幀圖片</p>
-                </div>
-            </div>
+        <div
+          id="detailModalContent"
+          class="bg-gray-50 p-6 rounded-lg text-left overflow-y-auto"
+        ></div>
+      </div>
+    </div>
+    <div id="historyChartsModal" class="modal">
+      <div class="modal-content">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-2xl font-bold text-gray-800">
+            歷史數據總覽與趨勢分析
+          </h2>
+          <button
+            id="closeHistoryChartsModal"
+            class="text-gray-500 hover:text-gray-800 text-3xl"
+          >
+            &times;
+          </button>
         </div>
-
+        <div class="border-b border-gray-200">
+          <nav id="modal-tabs" class="flex -mb-px overflow-x-auto">
+            <button class="tab-button active" data-tab="correlation">
+              關聯性分析
+            </button>
+            <button class="tab-button" data-tab="trends">趨勢與分佈</button>
+            <button class="tab-button" data-tab="stability">穩定性分析</button>
+            <button class="tab-button" data-tab="heatmap">關聯性矩陣</button>
+            <button class="tab-button" data-tab="posture-analysis">
+              好壞球姿勢分析
+            </button>
+          </nav>
+        </div>
+        <div class="pt-6">
+          <div id="correlation-tab" class="tab-content active">
+            <div class="grid grid-cols-1 gap-6">
+              <div class="card">
+                <div class="flex items-center gap-4 mb-2">
+                  <h3 class="text-lg font-bold text-gray-700">
+                    關聯性探索
+                    <span
+                      class="tooltip text-xs bg-gray-300 text-black rounded-full w-4 h-4 inline-flex items-center justify-center ml-1"
+                      >?
+                      <span class="tooltiptext">
+                        <b>想知道哪個動作與球速最相關嗎？</b><br />
+                        此圖表幫助您探索任兩個指標間的潛在關聯性。例如，您可以觀察「肩肘分離」是否隨著「軀幹旋轉」角度增加而變大。找出正或負相關，有助於優化您的投球動力鏈。
+                      </span>
+                    </span>
+                  </h3>
+                  <select id="corr-x-axis" class="chart-selector"></select
+                  ><span>vs</span
+                  ><select id="corr-y-axis" class="chart-selector"></select>
+                </div>
+                <div class="w-full h-80">
+                  <canvas id="correlationExplorerChart"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="trends-tab" class="tab-content">
+            <div class="grid grid-cols-1 gap-6">
+              <div class="card lg:col-span-2">
+                <div class="flex items-center gap-4 mb-2">
+                  <h3 class="text-lg font-bold text-gray-700">
+                    表現趨勢時間軸
+                    <span
+                      class="tooltip text-xs bg-gray-300 text-black rounded-full w-4 h-4 inline-flex items-center justify-center ml-1"
+                      >?
+                      <span class="tooltiptext">
+                        <b>想追蹤自己的進步或變化嗎？</b><br />
+                        例如，在改變訓練菜單後，您的「最大球速」是否有穩定提升？或是在疲勞時，「動作品質分數」是否會下降？此圖表能幫助您評估訓練成效與身體狀態的穩定性。
+                      </span>
+                    </span>
+                  </h3>
+                  <select
+                    id="time-series-metric"
+                    class="chart-selector"
+                  ></select>
+                </div>
+                <div class="w-full h-80">
+                  <canvas id="timeSeriesChart"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="stability-tab" class="tab-content">
+            <div class="card">
+              <div class="flex items-center gap-4 mb-2">
+                <h3 class="text-lg font-bold text-gray-700">
+                  運動力學穩定性
+                  <span
+                    class="tooltip text-xs bg-gray-300 text-black rounded-full w-4 h-4 inline-flex items-center justify-center ml-1"
+                    >?
+                    <span class="tooltiptext">
+                      <b>想知道自己的動作一致性好不好嗎？</b><br />
+                      圖形的分佈是集中還是分散？一個又高又窄的山峰，代表您這個動作的重複性極高，非常穩定。一個又寬又平的圖形，則可能代表動作在每次投球間的差異較大，穩定性有待加強。
+                    </span>
+                  </span>
+                </h3>
+                <select
+                  id="history-density-selector"
+                  class="chart-selector"
+                ></select>
+              </div>
+              <div class="w-full h-80">
+                <canvas id="biomechanicsHistoryDensityChart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div id="heatmap-tab" class="tab-content">
+            <div class="card">
+              <h3 class="text-lg font-bold text-gray-700 mb-2">
+                指標關聯性矩陣
+                <span
+                  class="tooltip text-xs bg-gray-300 text-black rounded-full w-4 h-4 inline-flex items-center justify-center ml-1"
+                  >?
+                  <span class="tooltiptext">
+                    <b>想從上帝視角看清您身體的連動嗎？</b><br />
+                    此圖快速找出所有指標中關聯性最強的組合。藍色越深代表正相關（A提高，B也提高）；紅色越深代表負相關。這有助於從整體上理解您個人獨特的動力鏈傳導模式。
+                  </span>
+                </span>
+              </h3>
+              <div
+                id="correlationTableContainer"
+                class="w-full overflow-x-auto relative"
+              >
+                <div
+                  id="heatmap-message"
+                  class="absolute inset-0 flex items-center justify-center text-gray-500 hidden"
+                ></div>
+              </div>
+            </div>
+          </div>
+          <div id="posture-analysis-tab" class="tab-content">
+            <div class="card">
+              <h3 class="text-lg font-bold text-gray-700 mb-2">
+                好壞球姿勢分析
+                <span
+                  class="tooltip text-xs bg-gray-300 text-black rounded-full w-4 h-4 inline-flex items-center justify-center ml-1"
+                  >?
+                  <span class="tooltiptext">
+                    <b>為什麼會投出壞球？</b><br />
+                    這張表格比較您投出「好球」與「壞球」時，各項身體角度的平均值差異。找出差異最大的動作，可能就是影響您控球穩定性的關鍵因素！
+                  </span>
+                </span>
+              </h3>
+              <div
+                id="postureAnalysisTableContainer"
+                class="w-full overflow-x-auto relative"
+              >
+                <div
+                  id="posture-analysis-message"
+                  class="h-24 flex items-center justify-center text-gray-500 hidden"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="container mx-auto max-w-7xl space-y-6">
+      <h1 class="text-4xl font-bold text-center text-gray-800">
+        棒球投手分析儀表板
+      </h1>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-1 flex flex-col gap-6">
+          <div class="card">
+            <h2 class="text-xl font-bold text-gray-700 mb-4">設定</h2>
+            <div class="space-y-4">
+              <div>
+                <label
+                  for="player-name-input"
+                  class="block text-sm font-medium text-gray-700"
+                  >投手名稱</label
+                >
+                <input
+                  type="text"
+                  id="player-name-input"
+                  list="pitcher-names-list"
+                  placeholder="請下拉選擇或輸入新增"
+                  class="mt-1 block w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                />
+                <datalist id="pitcher-names-list"></datalist>
+                <div class="mt-2 flex items-center">
+                  <input
+                    id="compare-user-average"
+                    type="checkbox"
+                    class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  />
+                  <label
+                    for="compare-user-average"
+                    class="ml-2 block text-sm text-gray-900"
+                    >與我自己的歷史平均進行比對</label
+                  >
+                </div>
+              </div>
+              <div>
+                <label
+                  for="benchmark-model-select"
+                  class="block text-sm font-medium text-gray-700"
+                  >比對標竿 (菁英選手)</label
+                >
+                <select
+                  id="benchmark-model-select"
+                  class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                ></select>
+              </div>
+            </div>
+          </div>
+          <div class="card flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-xl font-bold text-gray-700">歷史紀錄</h2>
+              <button
+                id="view-history-charts-btn"
+                class="bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-bold py-2 px-3 rounded-lg shadow-sm"
+              >
+                趨勢分析
+              </button>
+            </div>
+            <div
+              id="history-records"
+              class="h-48 overflow-y-auto -mr-4 pr-3 space-y-2"
+            >
+              <p id="no-history" class="text-gray-500 text-center">
+                讀取紀錄中...
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="lg:col-span-2">
+          <div class="card h-full">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-xl font-bold text-gray-700">影片分析</h2>
+              <button
+                id="analyze-another-btn"
+                class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg shadow-sm hidden"
+              >
+                選擇其他影片
+              </button>
+            </div>
+            <input
+              type="file"
+              id="video-upload"
+              accept="video/mp4,video/quicktime"
+              class="hidden"
+            />
+            <div
+              class="aspect-video bg-gray-200 rounded-lg flex items-center justify-center cursor-pointer"
+              id="video-upload-area"
+            >
+              <video
+                id="video-player"
+                controls
+                class="w-full h-full object-contain rounded-lg hidden"
+              ></video>
+              <p id="video-placeholder" class="text-gray-500">
+                點擊此處選擇影片
+              </p>
+            </div>
+            <p
+              id="file-name"
+              class="mt-2 text-gray-600 text-sm text-center"
+            ></p>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">關鍵影格</h2>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- 姿勢評分與運動力學特徵 -->
-            <div class="card col-span-1">
-                <h2 class="text-2xl font-semibold text-gray-700 mb-4">姿勢評分與運動力學特徵</h2>
-                <div id="biomechanics-features" class="space-y-3 text-gray-700">
-                    <p><strong>出手幀 (Release Frame):</strong> <span id="release-frame">N/A</span></p>
-                    <p><strong>踏步幀 (Landing Frame):</strong> <span id="landing-frame">N/A</span></p>
-                    <p><strong>肩膀幀 (Shoulder Frame):</strong> <span id="shoulder-frame">N/A</span></p>
-                    <p><strong>總幀數 (Total Frames):</strong> <span id="total-frames">N/A</span></p>
-                    <hr class="border-gray-300 my-2">
-                    <p><strong>軀幹屈曲幅度 (Trunk Flexion Excursion):</strong> <span id="trunk-flexion-excursion">N/A</span></p>
-                    <p><strong>骨盆傾斜度 (Pelvis Obliquity at FC):</strong> <span id="pelvis-obliquity">N/A</span></p>
-                    <p><strong>軀幹旋轉 (Trunk Rotation at BR):</strong> <span id="trunk-rotation">N/A</span></p>
-                    <p><strong>肩部外展 (Shoulder Abduction at BR):</strong> <span id="shoulder-abduction">N/A</span></p>
-                    <p><strong>軀幹屈曲 (Trunk Flexion at BR):</strong> <span id="trunk-flexion">N/A</span></p>
-                    <p><strong>軀幹側向屈曲 (Trunk Lateral Flexion at HS):</strong> <span id="trunk-lateral-flexion">N/A</span></p>
-                </div>
+          <div class="text-center">
+            <h3 class="text-lg font-semibold text-gray-700 mb-2">出手幀</h3>
+            <div
+              class="aspect-video bg-gray-100 rounded-lg flex items-center justify-center"
+            >
+              <img
+                id="release-frame-img"
+                src=""
+                alt="出手幀"
+                class="w-full h-full object-contain rounded-lg hidden cursor-pointer"
+              />
+              <p id="release-frame-placeholder" class="text-gray-400">無圖片</p>
             </div>
-
-            <!-- 模型預測結果 -->
-            <div class="card col-span-1">
-                <h2 class="text-2xl font-semibold text-gray-700 mb-4">模型預測結果</h2>
-                <div class="space-y-4 text-center text-gray-700">
-                    <div class="bg-blue-100 p-4 rounded-lg shadow-inner">
-                        <p class="text-lg">最大球速:</p>
-                        <p id="max-speed-kmh" class="text-5xl font-extrabold text-blue-700">N/A</p>
-                        <p class="text-sm text-blue-600">公里/小時</p>
-                    </div>
-                    <div class="bg-green-100 p-4 rounded-lg shadow-inner">
-                        <p class="text-lg">投球分數:</p>
-                        <p id="pitch-score" class="text-5xl font-extrabold text-green-700">N/A</p>
-                        <p class="text-sm text-green-600">分 (1-4)</p>
-                    </div>
-                    <!-- 新增 ball_score 顯示 -->
-                    <div class="bg-yellow-100 p-4 rounded-lg shadow-inner">
-                        <p class="text-lg">好球/壞球判斷:</p>
-                        <p id="ball-score-display" class="text-5xl font-extrabold text-yellow-700">N/A</p>
-                        <p class="text-sm text-yellow-600"> (數值: <span id="ball-score-raw">N/A</span>)</p>
-                    </div>
-                </div>
+          </div>
+          <div class="text-center">
+            <h3 class="text-lg font-semibold text-gray-700 mb-2">踏步幀</h3>
+            <div
+              class="aspect-video bg-gray-100 rounded-lg flex items-center justify-center"
+            >
+              <img
+                id="landing-frame-img"
+                src=""
+                alt="踏步幀"
+                class="w-full h-full object-contain rounded-lg hidden cursor-pointer"
+              />
+              <p id="landing-frame-placeholder" class="text-gray-400">無圖片</p>
             </div>
-
-            <!-- 歷史紀錄 -->
-            <div class="card col-span-1">
-                <h2 class="text-2xl font-semibold text-gray-700 mb-4">歷史紀錄</h2>
-                <div id="history-records" class="space-y-4 max-h-80 overflow-y-auto">
-                    <p id="no-history" class="text-gray-500 text-center">目前沒有歷史紀錄。</p>
-                </div>
-                <div class="mt-6 text-center">
-                    <button id="view-history-charts" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-transform transform hover:scale-105">
-                        查看歷史紀錄分析
-                    </button>
-                </div>
+          </div>
+          <div class="text-center">
+            <h3 class="text-lg font-semibold text-gray-700 mb-2">
+              最大肩外旋幀
+            </h3>
+            <div
+              class="aspect-video bg-gray-100 rounded-lg flex items-center justify-center"
+            >
+              <img
+                id="shoulder-frame-img"
+                src=""
+                alt="最大肩外旋幀"
+                class="w-full h-full object-contain rounded-lg hidden cursor-pointer"
+              />
+              <p id="shoulder-frame-placeholder" class="text-gray-400">
+                無圖片
+              </p>
             </div>
+          </div>
         </div>
-    </div>
-
-    <!-- 棒球歷史紀錄分析統計圖表頁面 -->
-    <div id="historyChartsPage" class="container hidden">
-        <h1 class="text-4xl font-bold text-center text-gray-800 mb-8">棒球歷史紀錄分析統計圖表</h1>
-        <button id="backToMainPage" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg shadow-md mb-6">
-            ← 返回主頁
-        </button>
-
-        <!-- 資料選擇方式 -->
-        <div class="card mb-6">
-            <h2 class="text-2xl font-semibold text-gray-700 mb-4">選擇分析紀錄</h2>
-            <div class="mb-4">
-                <label for="filter-pitcher-name" class="block text-gray-700 text-sm font-bold mb-2">篩選投手名稱:</label>
-                <select id="filter-pitcher-name" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                    <option value="">所有投手</option>
-                </select>
-            </div>
-            <select id="record-selector" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">請選擇一個歷史紀錄</option>
-            </select>
+      </div>
+      <div class="card">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">模型預測總覽</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
+          <div class="bg-blue-50 p-6 rounded-lg border border-blue-100">
+            <p class="text-base font-medium text-blue-800">最大球速</p>
+            <p id="max-speed-kmh" class="text-5xl font-bold text-blue-600 my-2">
+              N/A
+            </p>
+            <p class="text-sm text-blue-500">km/h</p>
+          </div>
+          <div class="bg-green-50 p-6 rounded-lg border border-green-100">
+            <p class="text-base font-medium text-green-800">動作品質分數</p>
+            <p id="pose-score" class="text-5xl font-bold text-green-600 my-2">
+              N/A
+            </p>
+            <p class="text-sm text-green-500">評估姿勢效率 (0-100)</p>
+          </div>
+          <div class="bg-yellow-50 p-6 rounded-lg border border-yellow-100">
+            <p class="text-base font-medium text-yellow-800">好球機率預測</p>
+            <p
+              id="ball-score-display"
+              class="text-5xl font-bold text-yellow-600 my-2"
+            >
+              N/A
+            </p>
+            <p id="ball-score-raw" class="text-sm text-yellow-500">模型判定</p>
+          </div>
         </div>
-
-        <!-- 統計圖表區塊 -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- 投球分數分佈直方圖 -->
-            <div class="card col-span-1">
-                <h2 class="text-2xl font-semibold text-gray-700 mb-4">投球分數分佈直方圖</h2>
-                <div class="chart-container">
-                    <canvas id="pitchScoreChart"></canvas>
-                </div>
-            </div>
-
-            <!-- 各種運動力學特徵分布的圓餅圖 -->
-            <div class="card col-span-1">
-                <h2 class="text-2xl font-semibold text-gray-700 mb-4">運動力學特徵分佈圓餅圖</h2>
-                <select id="biomechanics-pie-selector" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4">
-                    <option value="">請選擇一個特徵</option>
-                    <option value="Trunk_flexion_excursion">軀幹屈曲幅度</option>
-                    <option value="Pelvis_obliquity_at_FC">骨盆傾斜度</option>
-                    <option value="Trunk_rotation_at_BR">軀幹旋轉</option>
-                    <option value="Shoulder_abduction_at_BR">肩部外展</option>
-                    <option value="Trunk_flexion_at_BR">軀幹屈曲</option>
-                    <option value="Trunk_lateral_flexion_at_HS">軀幹側向屈曲</option>
-                </select>
-                <div class="chart-container">
-                    <canvas id="biomechanicsPieChart"></canvas>
-                </div>
-            </div>
-
-            <!-- 運動力學特徵雷達圖 -->
-            <div class="card col-span-1"> <!-- Changed from col-span-full to col-span-1 -->
-                <h2 class="text-2xl font-semibold text-gray-700 mb-4">運動力學特徵雷達圖</h2>
-                <div class="chart-container">
-                    <canvas id="biomechanicsRadarChart"></canvas>
-                </div>
-            </div>
-
-            <!-- 好球/壞球分數排行榜 -->
-            <div class="card col-span-1">
-                <h2 class="text-2xl font-semibold text-gray-700 mb-4">好球/壞球分數排行榜</h2>
-                <div id="ball-score-ranking" class="space-y-2 max-h-96 overflow-y-auto">
-                    <p class="text-gray-500 text-center">根據好球分數高低排序</p>
-                </div>
-            </div>
-
-            <!-- 運動力學特徵密度圖 -->
-            <div class="card col-span-1">
-                <h2 class="text-2xl font-semibold text-gray-700 mb-4">運動力學特徵密度圖</h2>
-                <select id="biomechanics-density-selector" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4">
-                    <option value="">請選擇一個特徵</option>
-                    <option value="Trunk_flexion_excursion">軀幹屈曲幅度</option>
-                    <option value="Pelvis_obliquity_at_FC">骨盆傾斜度</option>
-                    <option value="Trunk_rotation_at_BR">軀幹旋轉</option>
-                    <option value="Shoulder_abduction_at_BR">肩部外展</option>
-                    <option value="Trunk_flexion_at_BR">軀幹屈曲</option>
-                    <option value="Trunk_lateral_flexion_at_HS">軀幹側向屈曲</option>
-                </select>
-                <div class="chart-container">
-                    <canvas id="biomechanicsDensityChart"></canvas>
-                </div>
-            </div>
-
-            <!-- 球速與好壞球分數散點圖 -->
-            <div class="card col-span-1">
-                <h2 class="text-2xl font-semibold text-gray-700 mb-4">球速與好壞球分數散點圖</h2>
-                <div class="chart-container">
-                    <canvas id="speedBallScoreScatterChart"></canvas>
-                </div>
-            </div>
-
-            <!-- 歷史紀錄關鍵影格顯示區 -->
-            <div class="card col-span-full">
-                <h2 class="text-2xl font-semibold text-gray-700 mb-4">歷史紀錄關鍵影格</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="flex flex-col items-center">
-                        <h3 class="text-lg font-medium text-gray-700 mb-2">出手幀</h3>
-                        <img id="history-release-frame-img" src="" alt="出手幀" class="w-full h-48 object-contain border rounded-lg hidden">
-                        <p id="history-release-frame-placeholder" class="text-gray-500 mt-2">無出手幀圖片</p>
-                    </div>
-                    <div class="flex flex-col items-center">
-                        <h3 class="text-lg font-medium text-gray-700 mb-2">踏步幀</h3>
-                        <img id="history-landing-frame-img" src="" alt="踏步幀" class="w-full h-48 object-contain border rounded-lg hidden">
-                        <p id="history-landing-frame-placeholder" class="text-gray-500 mt-2">無踏步幀圖片</p>
-                    </div>
-                    <div class="flex flex-col items-center">
-                        <h3 class="text-lg font-medium text-gray-700 mb-2">肩膀幀</h3>
-                        <img id="history-shoulder-frame-img" src="" alt="肩膀幀" class="w-full h-48 object-contain border rounded-lg hidden">
-                        <p id="history-shoulder-frame-placeholder" class="text-gray-500 mt-2">無肩膀幀圖片</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-        </div>
+      </div>
+      <div class="card">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">
+          生物力學深度診斷
+          <span
+            class="tooltip text-xs bg-gray-300 text-black rounded-full w-4 h-4 inline-flex items-center justify-center ml-1"
+            >?
+            <span class="tooltiptext">
+              <b>此區塊的用途是什麼？</b><br />
+              這裡會將您本次投球的各項生物力學數據，與菁英選手模型進行逐項的深度比對。您可以透過圖表直觀地看出您每個動作的數值落點、與菁英常態區間的差異，並透過
+              Z-score 了解其標準化後的差距大小，幫助您找出最需調整的技術細節。
+            </span>
+          </span>
+        </h2>
+        <div id="elite-comparison-block"></div>
+        <div id="average-comparison-block" class="mt-8"></div>
+      </div>
     </div>
 
     <script>
-        // 後端 URL，請替換成您實際的後端 URL
-        const BACKEND_URL = "https://baseball-0623-backend-924124779607.europe-west1.run.app";
-
-        let allHistoryData = []; // 儲存所有歷史紀錄數據
-
-        // 更新關鍵影格圖片 (移至全域範圍)
-        function updateKeyframeImage(imgId, placeholderId, imageUrl) {
-            const imgElement = $(`#${imgId}`);
-            const placeholderElement = $(`#${placeholderId}`);
-            if (imageUrl) {
-                imgElement.attr('src', imageUrl);
-                imgElement.removeClass('hidden');
-                placeholderElement.addClass('hidden');
-            } else {
-                imgElement.addClass('hidden');
-                placeholderElement.removeClass('hidden');
-            }
-        }
-
-        // 自定義彈出視窗函數
-        function showCustomModal(message, type = 'alert') {
-            return new Promise((resolve) => {
-                $('#modalMessage').html(message); // 使用 .html() 來解析 <br> 標籤
-                if (type === 'confirm') {
-                    $('#modalConfirmBtn').show();
-                    $('#modalCancelBtn').show();
-                } else { // type === 'alert'
-                    $('#modalConfirmBtn').show(); // Show confirm for alert as well
-                    $('#modalCancelBtn').hide();
-                }
-                $('#customModal').css('display', 'flex'); // Use flex to center
-
-                $('#modalConfirmBtn').off().on('click', function() {
-                    $('#customModal').hide();
-                    resolve(true);
-                });
-                $('#modalCancelBtn').off().on('click', function() {
-                    $('#customModal').hide();
-                    resolve(false);
-                });
-            });
-        }
-
-
-        // 頁面導航函數
-        function navigateTo(pageId) {
-            $('.container').addClass('hidden');
-            $(`#${pageId}`).removeClass('hidden');
-            if (pageId === 'historyChartsPage') {
-                loadHistoryForCharts();
-            }
-        }
-
-        // 影片上傳處理
-        $('#upload-button').on('click', function() {
-            $('#video-upload').click();
-        });
-
-        $('#video-upload').on('change', async function() {
-            const fileInput = this;
-            if (fileInput.files.length === 0) {
-                $('#file-name').text('');
-                return;
-            }
-
-            const file = fileInput.files[0];
-            const pitcherName = $('#pitcher-name-input').val();
-
-            if (!pitcherName) {
-                await showCustomModal('請輸入投手名稱！', 'alert');
-                $('#loadingOverlay').addClass('hidden');
-                return;
-            }
-
-            $('#file-name').text(`已選擇檔案: ${file.name}`);
-
-            const formData = new FormData();
-            formData.append('video_file', file);
-            formData.append('player_name', pitcherName);
-
-            $('#loadingOverlay').removeClass('hidden'); // 顯示 loading 畫面
-
-            try {
-                const response = await fetch(`${BACKEND_URL}/analyze-pitch/`, {
-                    method: 'POST',
-                    body: formData,
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || '影片分析失敗');
-                }
-
-                const data = await response.json();
-                console.log('分析結果:', data);
-
-                // 更新影片播放區
-                const videoPlayer = $('#video-player');
-                // The backend now returns a full GCS URL in 'output_video_url'
-                videoPlayer.attr('src', data.output_video_url);
-                videoPlayer.removeClass('hidden');
-                $('#video-placeholder').addClass('hidden');
-
-                
-
-                updateKeyframeImage('release-frame-img', 'release-frame-placeholder', data.release_frame_url);
-                updateKeyframeImage('landing-frame-img', 'landing-frame-placeholder', data.landing_frame_url);
-                updateKeyframeImage('shoulder-frame-img', 'shoulder-frame-placeholder', data.shoulder_frame_url);
-
-                // 更新姿勢評分與運動力學特徵
-                const biomechanics = data.biomechanics_features;
-                $('#release-frame').text(biomechanics.release_frame || 'N/A');
-                $('#landing-frame').text(biomechanics.landing_frame || 'N/A');
-                $('#shoulder-frame').text(biomechanics.shoulder_frame || 'N/A');
-                $('#total-frames').text(biomechanics.total_frames || 'N/A');
-
-                $('#trunk-flexion-excursion').text(biomechanics.Trunk_flexion_excursion !== undefined ? biomechanics.Trunk_flexion_excursion.toFixed(2) : 'N/A');
-                $('#pelvis-obliquity').text(biomechanics.Pelvis_obliquity_at_FC !== undefined ? biomechanics.Pelvis_obliquity_at_FC.toFixed(2) : 'N/A');
-                $('#trunk-rotation').text(biomechanics.Trunk_rotation_at_BR !== undefined ? biomechanics.Trunk_rotation_at_BR.toFixed(2) : 'N/A');
-                $('#shoulder-abduction').text(biomechanics.Shoulder_abduction_at_BR !== undefined ? biomechanics.Shoulder_abduction_at_BR.toFixed(2) : 'N/A');
-                $('#trunk-flexion').text(biomechanics.Trunk_flexion_at_BR !== undefined ? biomechanics.Trunk_flexion_at_BR.toFixed(2) : 'N/A');
-                $('#trunk-lateral-flexion').text(biomechanics.Trunk_lateral_flexion_at_HS !== undefined ? biomechanics.Trunk_lateral_flexion_at_HS.toFixed(2) : 'N/A');
-
-                // 更新模型預測結果
-                $('#max-speed-kmh').text(data.max_speed_kmh !== undefined ? data.max_speed_kmh : 'N/A');
-                $('#pitch-score').text(data.pitch_score !== undefined ? data.pitch_score : 'N/A');
-
-                // 更新 ball_score 顯示
-                if (data.ball_score !== undefined) {
-                    const ballScoreText = data.ball_score > 0.5 ? '好球' : '壞球';
-                    $('#ball-score-display').text(ballScoreText);
-                    $('#ball-score-raw').text(data.ball_score.toFixed(2));
-                } else {
-                    $('#ball-score-display').text('N/A');
-                    $('#ball-score-raw').text('N/A');
-                }
-
-                // 重新載入歷史紀錄
-                loadHistoryRecords();
-
-                await showCustomModal('影片分析成功！', 'alert');
-
-            } catch (error) {
-                console.error('分析請求失敗:', error);
-                await showCustomModal(`影片分析失敗: ${error.message}`, 'alert');
-            } finally {
-                $('#loadingOverlay').addClass('hidden'); // 隱藏 loading 畫面
-            }
-        });
-
-        // 載入歷史紀錄
-        async function loadHistoryRecords() {
-            try {
-                const response = await fetch(`${BACKEND_URL}/history/`);
-                if (!response.ok) {
-                    throw new Error('無法載入歷史紀錄');
-                }
-                allHistoryData = await response.json();
-                console.log('歷史紀錄:', allHistoryData);
-
-                const historyRecordsDiv = $('#history-records');
-                historyRecordsDiv.empty(); // 清空現有紀錄
-
-                if (allHistoryData.length === 0) {
-                    historyRecordsDiv.append('<p id="no-history" class="text-gray-500 text-center">目前沒有歷史紀錄。</p>');
-                    $('#view-history-charts').prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
-                } else {
-                    $('#no-history').remove();
-                    $('#view-history-charts').prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
-
-                    allHistoryData.sort((a, b) => b.id - a.id); // Sort by ID descending
-
-                    allHistoryData.forEach(record => {
-                        const ballScoreStatus = record.ball_score !== undefined ? (record.ball_score > 0.5 ? '好球' : '壞球') : 'N/A';
-                        const ballScoreRaw = record.ball_score != null ? record.ball_score.toFixed(2) : 'N/A';
-                        const recordElement = `
-                            <div class="border border-gray-200 rounded-lg p-3 shadow-sm flex justify-between items-center bg-white">
-                                <div>
-                                    <p class="text-sm font-semibold">分析 ID: ${record.id}</p>
-                                    <p class="text-sm text-gray-600">投手名稱: ${record.pitcher_name || 'N/A'}</p>
-                                    <p class="text-sm text-gray-600">球速: ${record.max_speed_kmh} km/h</p>
-                                    <p class="text-sm text-gray-600">分數: ${record.pitch_score}</p>
-                                    <p class="text-sm text-gray-600">好壞球: ${ballScoreStatus} (數值: ${ballScoreRaw})</p>
-                                </div>
-                                <div class="grid grid-cols-2 gap-1 mt-2">
-                                    <button class="view-detail-btn bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs font-bold py-0.5 px-2 rounded-md" data-id="${record.id}">
-                                        查看
-                                    </button>
-                                    <button class="replay-btn bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-0.5 px-2 rounded-md" data-id="${record.id}">
-                                        回放
-                                    </button>
-                                    <button class="edit-btn bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-bold py-0.5 px-2 rounded-md" data-id="${record.id}">
-                                        修改
-                                    </button>
-                                    <button class="delete-btn bg-red-500 hover:bg-red-600 text-white text-xs font-bold py-0.5 px-2 rounded-md" data-id="${record.id}">
-                                        刪除
-                                    </button>
-                                </div>
-                            </div>
-                        `;
-                        historyRecordsDiv.append(recordElement);
-                    });
-
-                    // 為查看細節按鈕添加事件監聽器
-                    $('.view-detail-btn').on('click', function() {
-                        const recordId = $(this).data('id');
-                        const selectedRecord = allHistoryData.find(record => record.id === recordId);
-                        if (selectedRecord) {
-                            displayRecordDetails(selectedRecord);
-                        }
-                    });
-
-                    // 為再次回放按鈕添加事件監聽器
-                    $('.replay-btn').on('click', function() {
-                        const recordId = $(this).data('id');
-                        const selectedRecord = allHistoryData.find(record => record.id === recordId);
-                        if (selectedRecord) {
-                            replay_record(selectedRecord);
-                        }
-                    });
-
-                    // 為修改按鈕添加事件監聽器
-                    $('.edit-btn').on('click', function() {
-                        const recordId = $(this).data('id');
-                        const selectedRecord = allHistoryData.find(record => record.id === recordId);
-                        if (selectedRecord) {
-                            editRecord(selectedRecord);
-                        }
-                    });
-
-                    // 為刪除按鈕添加事件監聽器
-                    $('.delete-btn').on('click', function() {
-                        const recordId = $(this).data('id');
-                        deleteRecord(recordId);
-                    });
-                }
-            } catch (error) {
-                console.error('載入歷史紀錄失敗:', error);
-                await showCustomModal(`載入歷史紀錄失敗: ${error.message}`, 'alert');
-            }
-        }
-
-        // 顯示單一歷史紀錄的詳細資訊
-        async function displayRecordDetails(record) {
-            const ballScoreStatus = record.ball_score !== undefined ? (record.ball_score > 0.5 ? '好球' : '壞球') : 'N/A';
-            const ballScoreRaw = record.ball_score != null ? record.ball_score.toFixed(2) : 'N/A';
-
-            const confirmDisplay = await showCustomModal(`
-                <strong>分析 ID:</strong> ${record.id}<br>
-                <strong>投手名稱:</strong> ${record.pitcher_name || 'N/A'}<br>
-                <strong>影片路徑:</strong> ${record.video_path ? record.video_path.split('/').pop() : 'N/A'}<br>
-                <strong>最大球速:</strong> ${record.max_speed_kmh} km/h<br>
-                <strong>投球分數:</strong> ${record.pitch_score}<br>
-                <strong>好球/壞球判斷:</strong> ${ballScoreStatus} (數值: ${ballScoreRaw})<br><br>
-                <strong>生物力學特徵:</strong><br>
-                出手幀 (Release Frame): ${record.biomechanics_features.release_frame}<br>
-                踏步幀 (Landing Frame): ${record.biomechanics_features.landing_frame}<br>
-                肩膀幀 (Shoulder Frame): ${record.biomechanics_features.shoulder_frame}<br>
-                總幀數 (Total Frames): ${record.biomechanics_features.total_frames}<br>
-                軀幹屈曲幅度 (Trunk Flexion Excursion): ${record.biomechanics_features.Trunk_flexion_excursion !== undefined ? record.biomechanics_features.Trunk_flexion_excursion.toFixed(2) : 'N/A'}<br>
-                骨盆傾斜度 (Pelvis Obliquity at FC): ${record.biomechanics_features.Pelvis_obliquity_at_FC !== undefined ? record.biomechanics_features.Pelvis_obliquity_at_FC.toFixed(2) : 'N/A'}<br>
-                軀幹旋轉 (Trunk Rotation at BR): ${record.biomechanics_features.Trunk_rotation_at_BR !== undefined ? record.biomechanics_features.Trunk_rotation_at_BR.toFixed(2) : 'N/A'}<br>
-                肩部外展 (Shoulder Abduction at BR): ${record.biomechanics_features.Shoulder_abduction_at_BR !== undefined ? record.biomechanics_features.Shoulder_abduction_at_BR.toFixed(2) : 'N/A'}<br>
-                軀幹屈曲 (Trunk Flexion at BR): ${record.biomechanics_features.Trunk_flexion_at_BR !== undefined ? record.biomechanics_features.Trunk_flexion_at_BR.toFixed(2) : 'N/A'}<br>
-                軀幹側向屈曲 (Trunk Lateral Flexion at HS): ${record.biomechanics_features.Trunk_lateral_flexion_at_HS !== undefined ? record.biomechanics_features.Trunk_lateral_flexion_at_HS.toFixed(2) : 'N/A'}
-            `, 'alert');
-        }
-
-        function replay_record(record) {
-            // Update video player
-            const videoPlayer = $('#video-player');
-            videoPlayer.attr('src', record.video_path);
-            videoPlayer.removeClass('hidden');
-            $('#video-placeholder').addClass('hidden');
-
-            // Update pitcher name display (if you have a dedicated spot for it on the main page)
-            // For now, we'll just log it or update a generic info area if available
-            console.log('Replaying record for pitcher:', record.pitcher_name);
-
-            // Update biomechanics features
-            const biomechanics = record.biomechanics_features;
-            $('#release-frame').text(biomechanics.release_frame || 'N/A');
-            $('#landing-frame').text(biomechanics.landing_frame || 'N/A');
-            $('#shoulder-frame').text(biomechanics.shoulder_frame || 'N/A');
-            $('#total-frames').text(biomechanics.total_frames || 'N/A');
-            $('#trunk-flexion-excursion').text(biomechanics.Trunk_flexion_excursion !== undefined ? biomechanics.Trunk_flexion_excursion.toFixed(2) : 'N/A');
-            $('#pelvis-obliquity').text(biomechanics.Pelvis_obliquity_at_FC !== undefined ? biomechanics.Pelvis_obliquity_at_FC.toFixed(2) : 'N/A');
-            $('#trunk-rotation').text(biomechanics.Trunk_rotation_at_BR !== undefined ? biomechanics.Trunk_rotation_at_BR.toFixed(2) : 'N/A');
-            $('#shoulder-abduction').text(biomechanics.Shoulder_abduction_at_BR !== undefined ? biomechanics.Shoulder_abduction_at_BR.toFixed(2) : 'N/A');
-            $('#trunk-flexion').text(biomechanics.Trunk_flexion_at_BR !== undefined ? biomechanics.Trunk_flexion_at_BR.toFixed(2) : 'N/A');
-            $('#trunk-lateral-flexion').text(biomechanics.Trunk_lateral_flexion_at_HS !== undefined ? biomechanics.Trunk_lateral_flexion_at_HS.toFixed(2) : 'N/A');
-
-            // Update model prediction results
-            $('#max-speed-kmh').text(record.max_speed_kmh != null ? record.max_speed_kmh.toFixed(2) : 'N/A');
-            $('#pitch-score').text(record.pitch_score != null ? record.pitch_score : 'N/A');
-            if (record.ball_score != null) {
-                const ballScoreText = record.ball_score > 0.5 ? '好球' : '壞球';
-                $('#ball-score-display').text(ballScoreText);
-                $('#ball-score-raw').text(record.ball_score.toFixed(2));
-            } else {
-                $('#ball-score-display').text('N/A');
-                $('#ball-score-raw').text('N/A');
-            }
-
-            updateKeyframeImage('release-frame-img', 'release-frame-placeholder', record.release_frame_url);
-            updateKeyframeImage('landing-frame-img', 'landing-frame-placeholder', record.landing_frame_url);
-            updateKeyframeImage('shoulder-frame-img', 'shoulder-frame-placeholder', record.shoulder_frame_url);
-
-            // Scroll to top to see the video and analysis
-            window.scrollTo(0, 0);
-        }
-
-        // 刪除紀錄函數
-        async function deleteRecord(recordId) {
-            const confirmDelete = await showCustomModal('確定要刪除這筆紀錄嗎？此操作無法復原。', 'confirm');
-            if (confirmDelete) {
-                try {
-                    const response = await fetch(`${BACKEND_URL}/analyses/${recordId}`, {
-                        method: 'DELETE',
-                    });
-
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.detail || '刪除失敗');
-                    }
-
-                    await showCustomModal('紀錄已成功刪除！', 'alert');
-                    loadHistoryRecords(); // 重新載入歷史紀錄
-                } catch (error) {
-                    console.error('刪除紀錄失敗:', error);
-                    await showCustomModal(`刪除紀錄失敗: ${error.message}`, 'alert');
-                }
-            }
-        }
-
-        // 編輯紀錄函數
-        function editRecord(record) {
-            $('#edit-record-id').val(record.id);
-            $('#edit-pitcher-name').val(record.pitcher_name || '');
-            $('#edit-max-speed-kmh').val(record.max_speed_kmh);
-            $('#edit-pitch-score').val(record.pitch_score);
-            $('#edit-ball-score').val(record.ball_score);
-            $('#editModal').css('display', 'flex');
-        }
-
-        // 儲存編輯後的紀錄
-        $('#saveEditBtn').on('click', async function() {
-            const recordId = $('#edit-record-id').val();
-            const updatedData = {
-                pitcher_name: $('#edit-pitcher-name').val(),
-                max_speed_kmh: parseFloat($('#edit-max-speed-kmh').val()),
-                pitch_score: parseInt($('#edit-pitch-score').val()),
-                ball_score: parseFloat($('#edit-ball-score').val()),
-            };
-
-            try {
-                const response = await fetch(`${BACKEND_URL}/analyses/${recordId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(updatedData),
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || '更新失敗');
-                }
-
-                $('#editModal').hide();
-                await showCustomModal('紀錄已成功更新！', 'alert');
-                loadHistoryRecords(); // 重新載入歷史紀錄
-            } catch (error) {
-                console.error('更新紀錄失敗:', error);
-                await showCustomModal(`更新紀錄失敗: ${error.message}`, 'alert');
-            }
-        });
-
-        // 取消編輯
-        $('#cancelEditBtn').on('click', function() {
-            $('#editModal').hide();
-        });
-
-
-        // 初始化時載入歷史紀錄
-        $(document).ready(async function() {
-            await loadHistoryRecords();
-
-            // 如果有歷史紀錄，預設載入最新一筆到儀表板
-            if (allHistoryData.length > 0) {
-                replay_record(allHistoryData[0]);
-            }
-
-            // 為所有關鍵影格圖片添加點擊事件監聽器 (主頁和歷史頁)
-            $(document).on('click', '#release-frame-img, #landing-frame-img, #shoulder-frame-img, #history-release-frame-img, #history-landing-frame-img, #history-shoulder-frame-img', function() {
-                const imageUrl = $(this).attr('src');
-                if (imageUrl) {
-                    $('#modalImage').attr('src', imageUrl);
-                    $('#imageModal').css('display', 'flex');
-                }
-            });
-
-            // 關閉圖片模態視窗
-            $('#closeImageModalBtn').on('click', function() {
-                $('#imageModal').hide();
-            });
-        });
-
-        // 歷史紀錄圖表頁面導航
-        $('#view-history-charts').on('click', function() {
-            navigateTo('historyChartsPage');
-        });
-
-        $('#backToMainPage').on('click', function() {
-            navigateTo('mainPage');
-        });
-
-        // =====================================
-        // 歷史紀錄分析統計圖表頁面功能
-        // =====================================
-        let pitchScoreChartInstance;
-        let biomechanicsPieChartInstance;
-        let biomechanicsRadarChartInstance;
-        let speedBallScoreScatterChartInstance;
-        let biomechanicsDensityChartInstance;
-
-        function loadHistoryForCharts(filterPitcherName = '') {
-            const recordSelector = $('#record-selector');
-            recordSelector.empty();
-            recordSelector.append('<option value="">請選擇一個歷史紀錄</option>');
-
-            const pitcherFilterSelector = $('#filter-pitcher-name');
-            pitcherFilterSelector.empty();
-            pitcherFilterSelector.append('<option value="">所有投手</option>');
-
-            const uniquePitchers = [...new Set(allHistoryData.map(record => record.pitcher_name).filter(name => name))];
-            uniquePitchers.sort().forEach(name => {
-                pitcherFilterSelector.append(`<option value="${name}">${name}</option>`);
-            });
-
-            // Set the selected value if a filter is applied
-            if (filterPitcherName) {
-                pitcherFilterSelector.val(filterPitcherName);
-            }
-
-            const filteredHistory = allHistoryData.filter(record => {
-                return filterPitcherName === '' || (record.pitcher_name === filterPitcherName);
-            });
-
-            filteredHistory.forEach(record => {
-                const ballScoreStatus = record.ball_score !== undefined ? (record.ball_score > 0.5 ? '好球' : '壞球') : 'N/A';
-                const ballScoreRaw = record.ball_score != null ? record.ball_score.toFixed(2) : 'N/A';
-                recordSelector.append(`<option value="${record.id}">分析 ID: ${record.id} (投手: ${record.pitcher_name || 'N/A'}, 球速: ${record.max_speed_kmh} km/h, 分數: ${record.pitch_score}, 好壞球: ${ballScoreStatus})</option>`);
-            });
-
-            // 初始化所有圖表為空
-            // 初始化所有圖表為空
-            destroyCharts();
-            drawPitchScoreHistogram(filteredHistory.map(r => r.pitch_score));
-            drawBiomechanicsRadarChart({}); // 繪製空雷達圖
-            updateBallScoreRanking(filteredHistory); // 更新好球/壞球分數排行榜
-
-            // 自動選擇並載入最新的歷史紀錄
-            // 自動選擇並載入最新的歷史紀錄
-            if (filteredHistory.length > 0) {
-                const latestRecord = filteredHistory[0];
-                const latestRecordId = latestRecord.id;
-
-                recordSelector.val(latestRecordId);
-                recordSelector.trigger('change'); // Trigger change event to load all charts based on the selected record
-
-                // 自動選擇第一個運動力學特徵並載入圓餅圖
-                const biomechanicsPieSelector = $('#biomechanics-pie-selector');
-                if (biomechanicsPieSelector.find('option').length > 1) { // 確保有除了預設選項以外的特徵
-                    biomechanicsPieSelector.val('Trunk_flexion_excursion'); // 預設選擇軀幹屈曲幅度
-                    biomechanicsPieSelector.trigger('change'); // Trigger change event for pie chart
-                }
-
-                // 自動選擇第一個運動力學特徵並載入密度圖
-                const biomechanicsDensitySelector = $('#biomechanics-density-selector');
-                if (biomechanicsDensitySelector.find('option').length > 1) {
-                    biomechanicsDensitySelector.val('Trunk_flexion_excursion'); // 預設選擇軀幹屈曲幅度
-                    biomechanicsDensitySelector.trigger('change'); // Trigger change event for density chart
-                }
-            } else {
-                // If no records, ensure all charts are cleared
-                drawBiomechanicsRadarChart({});
-                updateKeyframeImage('history-release-frame-img', 'history-release-frame-placeholder', null);
-                updateKeyframeImage('history-landing-frame-img', 'history-landing-frame-placeholder', null);
-                updateKeyframeImage('history-shoulder-frame-img', 'history-shoulder-frame-placeholder', null);
-                drawSpeedBallScoreScatterChart([], null);
-                drawBiomechanicsDensityChart([], 'Trunk_flexion_excursion', null); // Clear density chart as well
-            }
-        }
-
-        // 篩選投手名稱下拉選單的事件監聽器
-        $('#filter-pitcher-name').on('change', function() {
-            const filterPitcherName = $(this).val();
-            loadHistoryForCharts(filterPitcherName);
-        });
-
-        function destroyCharts() {
-            if (pitchScoreChartInstance) {
-                pitchScoreChartInstance.destroy();
-            }
-            if (biomechanicsPieChartInstance) {
-                biomechanicsPieChartInstance.destroy();
-            }
-            if (biomechanicsRadarChartInstance) {
-                biomechanicsRadarChartInstance.destroy();
-            }
-            if (speedBallScoreScatterChartInstance) {
-                speedBallScoreScatterChartInstance.destroy();
-            }
-            if (biomechanicsDensityChartInstance) {
-                biomechanicsDensityChartInstance.destroy();
-            }
-            if (biomechanicsDensityChartInstance) {
-                biomechanicsDensityChartInstance.destroy();
-            }
-        }
-
-        // 投球分數分佈直方圖
-        function drawPitchScoreHistogram(scores) {
-            const ctx = document.getElementById('pitchScoreChart').getContext('2d');
-            const scoreCounts = {};
-            for (let i = 1; i <= 4; i++) {
-                scoreCounts[i] = 0;
-            }
-            scores.forEach(score => {
-                if (score >= 1 && score <= 4) {
-                    scoreCounts[score]++;
-                }
-            });
-
-            const labels = Object.keys(scoreCounts);
-            const data = Object.values(scoreCounts);
-
-            pitchScoreChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: '投球分數次數',
-                        data: data,
-                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: '次數'
-                            }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: '投球分數'
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'top',
-                        },
-                        title: {
-                            display: true,
-                            text: '投球分數分佈'
-                        },
-                        datalabels: {
-                            anchor: 'end',
-                            align: 'top',
-                            formatter: (value) => value > 0 ? value : '', // 只顯示大於0的值
-                            color: '#333',
-                            font: {
-                                weight: 'bold'
-                            }
-                        }
-                    }
-                },
-                plugins: [ChartDataLabels]
-            });
-        }
-
-        // 各種運動力學特徵分布的圓餅圖
-        function drawBiomechanicsPieChart(featureName, featureValue) {
-            if (biomechanicsPieChartInstance) {
-                biomechanicsPieChartInstance.destroy();
-            }
-
-            const ctx = document.getElementById('biomechanicsPieChart').getContext('2d');
-
-            // Use normalizeValue to get a percentage for the pie chart
-            let normalizedFeatureValue = 0;
-            // Define min/max for each feature for normalization, matching radar chart
-            const featureRanges = {
-                "Trunk_flexion_excursion": { min: 30, max: 90 },
-                "Pelvis_obliquity_at_FC": { min: -10, max: 10 },
-                "Trunk_rotation_at_BR": { min: 100, max: 200 },
-                "Shoulder_abduction_at_BR": { min: 120, max: 180 },
-                "Trunk_flexion_at_BR": { min: -90, max: -30 },
-                "Trunk_lateral_flexion_at_HS": { min: -10, max: 10 }
-            };
-
-            if (featureRanges[featureName]) {
-                normalizedFeatureValue = normalizeValue(
-                    featureValue,
-                    featureRanges[featureName].min,
-                    featureRanges[featureName].max
-                );
-            } else {
-                // Fallback if featureName is not in ranges, or if value is not a number
-                normalizedFeatureValue = (typeof featureValue === 'number' && !isNaN(featureValue)) ? Math.max(0, Math.min(100, featureValue)) : 0;
-            }
-
-            const data = [normalizedFeatureValue, 100 - normalizedFeatureValue];
-            const labels = [`${translateFeatureName(featureName)} (${featureValue !== undefined ? featureValue.toFixed(2) : 'N/A'})`, '剩餘範圍'];
-            const backgroundColors = ['rgba(255, 99, 132, 0.6)', 'rgba(200, 200, 200, 0.6)'];
-            const borderColors = ['rgba(255, 99, 132, 1)', 'rgba(200, 200, 200, 1)'];
-
-            biomechanicsPieChartInstance = new Chart(ctx, {
-                type: 'pie',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data,
-                        backgroundColor: backgroundColors,
-                        borderColor: borderColors,
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        },
-                        title: {
-                            display: true,
-                            text: `${translateFeatureName(featureName)} 在標準範圍內的比例`
-                        },
-                        datalabels: {
-                            formatter: (value, ctx) => {
-                                let sum = 0;
-                                let dataArr = ctx.chart.data.datasets[0].data;
-                                dataArr.map(data => {
-                                    sum += data;
-                                });
-                                let percentage = (value * 100 / sum).toFixed(2) + '%';
-                                return percentage;
-                            },
-                            color: '#fff',
-                        }
-                    }
-                },
-                plugins: [ChartDataLabels]
-            });
-        }
-
-        // 運動力學特徵雷達圖
-        function drawBiomechanicsRadarChart(biomechanics) {
-            if (biomechanicsRadarChartInstance) {
-                biomechanicsRadarChartInstance.destroy();
-            }
-
-            const ctx = document.getElementById('biomechanicsRadarChart').getContext('2d');
-
-            const labels = [
-                '軀幹屈曲幅度',
-                '骨盆傾斜度',
-                '軀幹旋轉',
-                '肩部外展',
-                '軀幹屈曲',
-                '軀幹側向屈曲'
-            ];
-
-            // 將特徵值轉換為雷達圖所需的數據，並進行簡單的正規化
-            // 這裡的正規化是基於一個假設的理想範圍，您可能需要根據實際數據調整
-            const data = [
-                normalizeValue(biomechanics.Trunk_flexion_excursion, 30, 90), // 假設理想範圍 30-90
-                normalizeValue(biomechanics.Pelvis_obliquity_at_FC, -10, 10),  // 假設理想範圍 -10-10
-                normalizeValue(biomechanics.Trunk_rotation_at_BR, 100, 200), // 假設理想範圍 100-200
-                normalizeValue(biomechanics.Shoulder_abduction_at_BR, 120, 180),// 假設理想範圍 120-180
-                normalizeValue(biomechanics.Trunk_flexion_at_BR, -90, -30),   // 假設理想範圍 -90--30
-                normalizeValue(biomechanics.Trunk_lateral_flexion_at_HS, -10, 10) // 假設理想範圍 -10-10
-            ];
-
-            biomechanicsRadarChartInstance = new Chart(ctx, {
-                type: 'radar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: '運動力學特徵',
-                        data: data,
-                        backgroundColor: 'rgba(75, 192, 192, 0.4)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        pointBackgroundColor: 'rgba(75, 192, 192, 1)',
-                        pointBorderColor: '#fff',
-                        pointHoverBackgroundColor: '#fff',
-                        pointHoverBorderColor: 'rgba(75, 192, 192, 1)'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    elements: {
-                        line: {
-                            borderWidth: 3
-                        }
-                    },
-                    scales: {
-                        r: {
-                            angleLines: {
-                                display: false
-                            },
-                            suggestedMin: 0,
-                            suggestedMax: 100, // 正規化到 0-100
-                            pointLabels: {
-                                font: {
-                                    size: 14
-                                }
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        },
-                        title: {
-                            display: true,
-                            text: '單一紀錄運動力學特徵雷達圖'
-                        },
-                        datalabels: {
-                            display: false, // 雷達圖上通常不顯示數據標籤
-                        }
-                    }
-                }
-            });
-        }
-
-        // 正規化函數 (將值映射到 0-100 範圍)
-        function normalizeValue(value, minRange, maxRange) {
-            if (value === undefined || value === null) return 0; // 或其他預設值
-            if (minRange === maxRange) return 50; // 避免除以零
-            return Math.max(0, Math.min(100, ((value - minRange) / (maxRange - minRange)) * 100));
-        }
-
-        // 運動力學特徵密度圖
-        function drawBiomechanicsDensityChart(allRecords, selectedFeature, selectedRecordId = null) {
-            if (biomechanicsDensityChartInstance) {
-                biomechanicsDensityChartInstance.destroy();
-            }
-
-            const ctx = document.getElementById('biomechanicsDensityChart').getContext('2d');
-
-            if (!selectedFeature) {
-                return; // No feature selected, do nothing
-            }
-
-            const featureValues = allRecords
-                .map(record => record.biomechanics_features ? record.biomechanics_features[selectedFeature] : undefined)
-                .filter(value => value !== undefined && value !== null);
-
-            if (featureValues.length === 0) {
-                return; // No data for this feature
-            }
-
-            // Calculate histogram data for density plot
-            const binCount = 10; // Number of bins for the histogram
-            const minVal = Math.min(...featureValues);
-            const maxVal = Math.max(...featureValues);
-            const binWidth = (maxVal - minVal) / binCount;
-
-            const bins = Array(binCount).fill(0);
-            const labels = [];
-
-            for (let i = 0; i < binCount; i++) {
-                const lowerBound = minVal + i * binWidth;
-                const upperBound = minVal + (i + 1) * binWidth;
-                labels.push(`${lowerBound.toFixed(1)}-${upperBound.toFixed(1)}`);
-                bins[i] = featureValues.filter(v => v >= lowerBound && (i === binCount - 1 ? v <= upperBound : v < upperBound)).length;
-            }
-
-            // Normalize bins to represent density (optional, but good for comparison)
-            const totalCount = featureValues.length;
-            const densityData = bins.map(count => (count / totalCount) * 100); // Percentage density
-
-            const datasets = [{
-                label: '所有紀錄密度',
-                data: densityData,
-                backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 1,
-                fill: true
-            }];
-
-            // Add selected record's position as a vertical line
-            if (selectedRecordId) {
-                const selectedRecord = allRecords.find(record => record.id == parseInt(selectedRecordId));
-                if (selectedRecord && selectedRecord.biomechanics_features && selectedRecord.biomechanics_features[selectedFeature] !== undefined) {
-                    const selectedValue = selectedRecord.biomechanics_features[selectedFeature];
-                    // Find which bin the selected value falls into
-                    let selectedBinIndex = -1;
-                    for (let i = 0; i < binCount; i++) {
-                        const lowerBound = minVal + i * binWidth;
-                        const upperBound = minVal + (i + 1) * binWidth;
-                        if (selectedValue >= lowerBound && (i === binCount - 1 ? selectedValue <= upperBound : selectedValue < upperBound)) {
-                            selectedBinIndex = i;
-                            break;
-                        }
-                    }
-
-                    if (selectedBinIndex !== -1) {
-                        datasets.push({
-                            label: '當前紀錄',
-                            data: Array(binCount).fill(null).map((_, i) => i === selectedBinIndex ? densityData[selectedBinIndex] : null), // Only show point at selected bin
-                            backgroundColor: 'red',
-                            borderColor: 'red',
-                            pointRadius: 8,
-                            pointHoverRadius: 10,
-                            type: 'line', // Use line type for the marker
-                            fill: false,
-                            showLine: false // Don't draw a line between points
-                        });
-                    }
-                }
-            }
-
-            biomechanicsDensityChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: datasets
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: translateFeatureName(selectedFeature)
-                            }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: '密度 (%)'
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        },
-                        title: {
-                            display: true,
-                            text: `${translateFeatureName(selectedFeature)} 分佈密度圖`
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    if (context.dataset.label === '當前紀錄') {
-                                        const selectedRecord = allRecords.find(record => record.id == selectedRecordId);
-                                        return `當前紀錄值: ${selectedRecord.biomechanics_features[selectedFeature].toFixed(2)}`;
-                                    } else {
-                                        return `${context.dataset.label}: ${context.formattedValue}%`;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // 球速與好壞球分數散點圖
-function drawSpeedBallScoreScatterChart(allRecords, selectedRecordId) {
-    if (speedBallScoreScatterChartInstance) {
-        speedBallScoreScatterChartInstance.destroy();
-    }
-
-    const ctx = document.getElementById('speedBallScoreScatterChart').getContext('2d');
-
-    const scatterData = allRecords
-        .filter(record => record.max_speed_kmh !== undefined && record.ball_score !== undefined)
-        .map(record => ({
-            x: record.max_speed_kmh.toFixed(2),
-            y: record.ball_score,
-            id: record.id,
-            pitcher_name: record.pitcher_name
-        }));
-
-    console.log("All filtered scatter data:", scatterData); // Check what's in scatterData
-    console.log("Selected record ID received:", selectedRecordId); // Check if selectedRecordId is passed
-
-    const datasets = [{
-        label: '所有紀錄',
-        data: scatterData.filter(d => d.id !== parseInt(selectedRecordId)),
-        backgroundColor: 'rgba(153, 102, 255, 0.6)',
-        borderColor: 'rgba(153, 102, 255, 1)',
-        pointRadius: 5,
-        pointHoverRadius: 7,
-    }];
-
-    if (selectedRecordId) {
-        const selectedRecordData = scatterData.find(d => d.id === parseInt(selectedRecordId));
-        console.log("Found selected record data:", selectedRecordData); // Check if the selected record is found
-        if (selectedRecordData) {
-            datasets.push({
-                label: '當前紀錄',
-                data: [selectedRecordData],
-                backgroundColor: 'red',
-                borderColor: 'darkred',
-                pointRadius: 8,
-                pointHoverRadius: 10,
-            });
+      // --- 全域變數與設定 ---
+      const BACKEND_URL =
+        "https://baseball-0623-backend-924124779607.europe-west1.run.app";
+      let allHistoryData = [],
+        currentRecord = null,
+        benchmarkProfiles = {};
+      let densityChartInstance,
+        timeSeriesChartInstance,
+        correlationChartInstance;
+      const keyMap = {
+        Trunk_flexion_excursion: "Trunk_flexion_excursion",
+        Pelvis_obliquity_at_FC: "Pelvis_obliquity_at_FC",
+        Trunk_rotation_at_BR: "Trunk_rotation_at_BR",
+        Shoulder_abduction_at_BR: "Shoulder_abduction_at_BR",
+        Trunk_flexion_at_BR: "Trunk_flexion_at_BR",
+        Trunk_lateral_flexion_at_HS: "Trunk_lateral_flexion_at_HS",
+      };
+      const featureNames = {
+        Trunk_flexion_excursion: "軀幹屈曲幅度",
+        Pelvis_obliquity_at_FC: "骨盆傾斜度",
+        Trunk_rotation_at_BR: "軀幹旋轉",
+        Shoulder_abduction_at_BR: "肩部外展",
+        Trunk_flexion_at_BR: "軀幹屈曲",
+        Trunk_lateral_flexion_at_HS: "軀幹側向屈曲",
+      };
+      const chartMetrics = [
+        { key: "max_speed_kmh", name: "最大球速" },
+        { key: "pose_score", name: "動作品質分數" },
+        { key: "ball_score", name: "好球機率" },
+        ...Object.keys(keyMap).map((k) => ({
+          key: `biomechanics_features.${k}`,
+          name: featureNames[k],
+        })),
+      ];
+
+      // --- 核心函式 ---
+
+      function updateKeyframeImage(imgId, placeholderId, url) {
+        const img = $(`#${imgId}`);
+        const placeholder = $(`#${placeholderId}`);
+        if (url) {
+          img.attr("src", url).removeClass("hidden");
+          placeholder.addClass("hidden");
         } else {
-            console.warn(`Selected record with ID ${selectedRecordId} not found in filtered data.`);
+          img.attr("src", "").addClass("hidden");
+          placeholder.removeClass("hidden");
         }
-    }
+      }
 
-    speedBallScoreScatterChartInstance = new Chart(ctx, {
-        type: 'scatter',
-        data: {
-            datasets: datasets
-        },
-        options: {
+      async function fetchBenchmarkModels() {
+        try {
+          const response = await fetch(`${BACKEND_URL}/models/`);
+          if (!response.ok) throw new Error(`無法獲取模型列表`);
+          const models = await response.json();
+          const select = $("#benchmark-model-select");
+          select.empty();
+          select.append(
+            `<option value="" disabled selected>— 請選擇比對模型 —</option>`
+          );
+          benchmarkProfiles = {};
+          models.forEach((model) => {
+            benchmarkProfiles[model.model_name] = model;
+            select.append(
+              `<option value="${model.model_name}">${model.display_name}</option>`
+            );
+          });
+        } catch (error) {
+          console.error("獲取比對標竿模型失敗:", error);
+        }
+      }
+
+      async function fetchHistory() {
+        try {
+          const response = await fetch(`${BACKEND_URL}/history/`);
+          if (!response.ok) {
+            throw new Error(`HTTP 錯誤! 狀態: ${response.status}`);
+          }
+          const data = await response.json();
+          allHistoryData = data;
+          updatePitcherDatalist();
+
+          if (allHistoryData.length > 0) {
+            const latestRecord = allHistoryData[0];
+            $("#player-name-input").val(latestRecord.player_name);
+            replay_record(latestRecord);
+            displayHistoryList(latestRecord.player_name);
+          } else {
+            clearDisplay();
+            displayHistoryList();
+          }
+        } catch (error) {
+          console.error("【fetchHistory 執行失敗】詳細錯誤資訊:", error);
+          alert(
+            `無法從後端獲取歷史紀錄，請檢查後端服務或瀏覽器Console中的錯誤訊息。\n錯誤: ${error.message}`
+          );
+          $("#no-history").text("獲取歷史紀錄失敗");
+        }
+      }
+
+      function formatRecordDetails(record) {
+        if (!record) return "<p>紀錄不存在或資料不完整。</p>";
+
+        let html = `<div class="space-y-6 text-base text-gray-800">`;
+        html += `<div><h4 class="font-bold text-lg text-indigo-700 border-b pb-2 mb-3">基本資訊</h4><div class="grid grid-cols-2 gap-x-4 gap-y-2"><p class="font-semibold text-gray-600">投手名稱:</p><p>${
+          record.player_name || "N/A"
+        }</p><p class="font-semibold text-gray-600">紀錄時間:</p><p>${
+          record.created_at
+            ? new Date(record.created_at).toLocaleString()
+            : "N/A"
+        }</p></div></div>`;
+        html += `<div><h4 class="font-bold text-lg text-indigo-700 border-b pb-2 mb-3">模型預測總覽</h4><div class="grid grid-cols-2 gap-x-4 gap-y-2"><p class="font-semibold text-gray-600">最大球速:</p><p>${
+          record.max_speed_kmh
+            ? record.max_speed_kmh.toFixed(1) + " km/h"
+            : "N/A"
+        }</p><p class="font-semibold text-gray-600">動作品質分數:</p><p>${
+          record.pose_score !== null ? record.pose_score : "N/A"
+        }</p><p class="font-semibold text-gray-600">好球機率:</p><p>${
+          record.ball_score !== null
+            ? (record.ball_score * 100).toFixed(0) + "%"
+            : "N/A"
+        }</p></div></div>`;
+        if (
+          record.biomechanics_features &&
+          Object.keys(record.biomechanics_features).length > 0
+        ) {
+          html += `<div><h4 class="font-bold text-lg text-indigo-700 border-b pb-2 mb-3">生物力學數據 (單位: 度)</h4><div class="grid grid-cols-2 gap-x-4 gap-y-2">`;
+          for (const key in featureNames) {
+            if (record.biomechanics_features.hasOwnProperty(key)) {
+              const value = record.biomechanics_features[key];
+              html += `<p class="font-semibold text-gray-600">${
+                featureNames[key]
+              }:</p><p>${value !== undefined ? value.toFixed(2) : "N/A"}</p>`;
+            }
+          }
+          html += `</div></div>`;
+        }
+        html += `</div>`;
+        return html;
+      }
+
+      async function analyzeVideo(
+        file,
+        playerName,
+        benchmarkName,
+        compareAverage
+      ) {
+        const formData = new FormData();
+        formData.append("video_file", file);
+        formData.append("player_name", playerName);
+        formData.append("benchmark_name", benchmarkName || "");
+        formData.append("compare_average", compareAverage);
+        $("#loadingOverlay").removeClass("hidden");
+        try {
+          const response = await fetch(`${BACKEND_URL}/analyze-pitch/`, {
+            method: "POST",
+            body: formData,
+          });
+          if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.detail || `分析失敗`);
+          }
+          const result = await response.json();
+          allHistoryData.unshift(result.new_record);
+          updatePitcherDatalist();
+          $("#player-name-input").val(result.new_record.player_name);
+          replay_record(result.new_record, result.benchmark_profiles);
+          displayHistoryList(result.new_record.player_name);
+        } catch (error) {
+          alert(`分析失敗: ${error.message}`);
+        } finally {
+          $("#loadingOverlay").addClass("hidden");
+          $("#video-upload").val("");
+        }
+      }
+
+      async function fetchAndRenderUserAverage() {
+        if (!currentRecord) return;
+        const playerName = currentRecord.player_name;
+        if (!playerName) {
+          $("#average-comparison-block").empty();
+          return;
+        }
+        const container = $("#average-comparison-block");
+        container.html(
+          '<p class="text-gray-500 text-center py-4">正在計算個人歷史平均...</p>'
+        );
+        try {
+          const response = await fetch(
+            `${BACKEND_URL}/user-average-profile/${playerName}`
+          );
+          if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.detail || "歷史紀錄不足或計算失敗");
+          }
+          const userAverageProfile = await response.json();
+          renderComparisonBlock(
+            userAverageProfile,
+            currentRecord.biomechanics_features,
+            container
+          );
+        } catch (error) {
+          container.html(
+            `<p class="text-center text-red-500 py-4">${error.message}</p>`
+          );
+        }
+      }
+
+      function renderComparisonBlock(modelProfile, userFeatures, container) {
+        container.empty();
+        if (!modelProfile || !userFeatures || !modelProfile.profile_data) {
+          container.html(
+            '<p class="text-center text-gray-500 py-4">無可用資料進行比對。</p>'
+          );
+          return;
+        }
+        const comparisonHtml = `
+      <div>
+          <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">
+              與 <span class="text-indigo-600">${
+                modelProfile.display_name || modelProfile.model_name
+              }</span> 比對
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8"></div>
+      </div>`;
+        const $comparisonBlock = $(comparisonHtml);
+        container.append($comparisonBlock);
+        const grid = $comparisonBlock.find(".grid");
+        let hasContent = false;
+        for (const featureKey in keyMap) {
+          const modelKey = featureKey.toLowerCase();
+          const userValue = userFeatures[featureKey];
+          if (userValue === undefined) continue;
+          const modelData = modelProfile.profile_data[modelKey];
+          if (!modelData) continue;
+          hasContent = true;
+          const { min, max, p10, p50_median, p90, mean, std } = modelData;
+          const bullet_range = max - min;
+          const bullet_p10_percent =
+            bullet_range > 0 ? ((p10 - min) / bullet_range) * 100 : 0;
+          const bullet_range_width =
+            bullet_range > 0 ? ((p90 - p10) / bullet_range) * 100 : 0;
+          const bullet_median_percent =
+            bullet_range > 0 ? ((p50_median - min) / bullet_range) * 100 : 50;
+          const bullet_user_percent =
+            bullet_range > 0
+              ? Math.max(
+                  0,
+                  Math.min(100, ((userValue - min) / bullet_range) * 100)
+                )
+              : 50;
+          const density_chart_min = mean - 2.5 * std;
+          const density_range = 5 * std;
+          const density_user_percent =
+            density_range > 0
+              ? Math.max(
+                  0,
+                  Math.min(
+                    100,
+                    ((userValue - density_chart_min) / density_range) * 100
+                  )
+                )
+              : 50;
+          const z_score = std > 0 ? (userValue - mean) / std : 0;
+          let textColor = "text-green-600";
+          if (Math.abs(z_score) > 1.5)
+            textColor = "text-yellow-600 font-semibold";
+          if (Math.abs(z_score) > 2.5) textColor = "text-red-600 font-semibold";
+          const cardHTML = `<div class="bg-gray-50 rounded-lg p-4 space-y-4 border border-gray-200"><div><p class="text-sm font-medium text-gray-600">${
+            featureNames[featureKey]
+          }</p><p class="text-3xl font-bold text-gray-900">${userValue.toFixed(
+            1
+          )}<span class="text-lg ml-1">度</span></p></div><div class="space-y-2"><h4 class="text-xs font-bold text-gray-500">常態區間對比 (P10-P90)</h4><div class="bullet-chart-container"><div class="bullet-chart-range" style="left: ${bullet_p10_percent}%; width: ${bullet_range_width}%;"></div><div class="bullet-chart-median" style="left: ${bullet_median_percent}%;"></div><div class="bullet-chart-marker" style="left: ${bullet_user_percent}%;"></div></div><div class="flex justify-between text-xs text-gray-500"><span>${p10.toFixed(
+            1
+          )}</span><span>${p90.toFixed(
+            1
+          )}</span></div></div><div class="space-y-2"><h4 class="text-xs font-bold text-gray-500">統計分佈對比 (Mean/STD)</h4><div class="density-plot-container"><div class="density-zone bg-red-200" style="width: 15.87%;"></div><div class="density-zone bg-yellow-200" style="width: 18.26%;"></div><div class="density-zone bg-green-200" style="width: 31.74%;"></div><div class="density-zone bg-yellow-200" style="width: 18.26%;"></div><div class="density-zone bg-red-200" style="width: 15.87%;"></div><div class="density-marker" style="left: ${density_user_percent}%;"><div class="absolute -top-5 left-1/2 -translate-x-1/2 text-xs font-bold text-red-500">${userValue.toFixed(
+            1
+          )}</div></div></div><div class="flex justify-between text-xs text-gray-500"><span>${(
+            mean - std
+          ).toFixed(1)}</span><span>${mean.toFixed(1)}</span><span>${(
+            mean + std
+          ).toFixed(
+            1
+          )}</span></div></div><p class="text-sm text-center pt-1 ${textColor}">Z-score: ${z_score.toFixed(
+            1
+          )} 
+              <span class="tooltip text-xs bg-gray-300 text-black rounded-full w-4 h-4 inline-flex items-center justify-center ml-1">?
+                <span class="tooltiptext">0-1:理想, 1-2:可接受, >2:警示。Z-score 代表您的數值與菁英平均的差距大小。</span>
+              </span>
+            </p></div>`;
+          grid.append(cardHTML);
+        }
+        if (!hasContent) {
+          grid
+            .parent()
+            .html(
+              '<p class="text-center text-gray-500 py-4">此模型無對應的生物力學數據。</p>'
+            );
+        }
+      }
+
+      function replay_record(record, benchmarkProfilesList = null) {
+        if (!record) return;
+        currentRecord = record;
+
+        $("#video-player")
+          .attr("src", record.video_path || "")
+          .removeClass("hidden");
+        $("#video-placeholder").addClass("hidden");
+        $("#analyze-another-btn").removeClass("hidden");
+        $("#video-upload-area").removeClass("cursor-pointer");
+        $("#file-name").text(
+          `正在顯示: ${record.player_name} (${(record.created_at
+            ? new Date(record.created_at)
+            : new Date()
+          ).toLocaleString()})`
+        );
+
+        const predictions = record.predictions || record;
+
+        $("#max-speed-kmh").text(
+          predictions.max_speed_kmh
+            ? predictions.max_speed_kmh.toFixed(1)
+            : "N/A"
+        );
+        $("#ball-score-display").text(
+          predictions.ball_score !== null
+            ? `${(predictions.ball_score * 100).toFixed(0)}%`
+            : "N/A"
+        );
+        $("#ball-score-raw").text(
+          `模型判定: ${predictions.ball_score > 0.5 ? "好球" : "壞球"}`
+        );
+
+        const poseScore = predictions.pose_score;
+        const poseMessage = predictions.pose_score_message;
+
+        if (poseMessage && poseMessage !== "分析成功") {
+          $("#pose-score")
+            .text(poseMessage)
+            .removeClass("text-5xl")
+            .addClass("text-2xl");
+        } else {
+          $("#pose-score")
+            .text(poseScore !== null ? poseScore : "N/A")
+            .removeClass("text-2xl")
+            .addClass("text-5xl");
+        }
+
+        updateKeyframeImage(
+          "release-frame-img",
+          "release-frame-placeholder",
+          record.keyframe_urls.release_frame_url
+        );
+        updateKeyframeImage(
+          "landing-frame-img",
+          "landing-frame-placeholder",
+          record.keyframe_urls.landing_frame_url
+        );
+        updateKeyframeImage(
+          "shoulder-frame-img",
+          "shoulder-frame-placeholder",
+          record.keyframe_urls.shoulder_frame_url
+        );
+
+        $("#elite-comparison-block").empty();
+        $("#average-comparison-block").empty();
+
+        if (benchmarkProfilesList) {
+          let eliteProfileRendered = false;
+          benchmarkProfilesList.forEach((profile) => {
+            if (!profile) return;
+            if (profile.model_name.includes("個人歷史平均")) {
+              renderComparisonBlock(
+                profile,
+                record.biomechanics_features,
+                $("#average-comparison-block")
+              );
+              $("#compare-user-average").prop("checked", true);
+            } else {
+              renderComparisonBlock(
+                profile,
+                record.biomechanics_features,
+                $("#elite-comparison-block")
+              );
+              $("#benchmark-model-select").val(profile.model_name);
+              eliteProfileRendered = true;
+            }
+          });
+          if (!eliteProfileRendered) $("#benchmark-model-select").val("");
+        } else {
+          $("#benchmark-model-select").val("");
+          $("#compare-user-average").prop("checked", false);
+        }
+      }
+
+      function updatePitcherDatalist() {
+        const datalist = $("#pitcher-names-list");
+        datalist.empty();
+        const uniquePitchers = [
+          ...new Set(allHistoryData.map((r) => r.player_name)),
+        ];
+        uniquePitchers.forEach((name) => {
+          datalist.append(`<option value="${name}"></option>`);
+        });
+      }
+
+      function displayHistoryList(filter) {
+        const records =
+          filter && filter.trim() !== ""
+            ? allHistoryData.filter((r) => r.player_name === filter)
+            : allHistoryData;
+        const div = $("#history-records");
+        div.empty();
+        if (records.length === 0) {
+          div.append('<p class="text-gray-500 text-center">沒有符合的紀錄</p>');
+          return;
+        }
+        records.forEach((r) => {
+          const recordHtml = `<div class="p-3 rounded-lg hover:bg-gray-100 border-b"><div class="flex justify-between items-center"><p class="font-bold text-sm text-gray-800">${
+            r.player_name
+          }</p><p class="text-xs text-gray-500">${new Date(
+            r.created_at
+          ).toLocaleDateString()}</p></div><div class="mt-2 flex justify-end gap-2"><button class="view-btn text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded" data-id="${
+            r.id
+          }">詳情</button><button class="replay-btn text-xs bg-green-100 text-green-800 px-2 py-1 rounded" data-id="${
+            r.id
+          }">回放</button></div></div>`;
+          div.append(recordHtml);
+        });
+      }
+
+      function clearDisplay() {
+        currentRecord = null;
+        $("#video-player").attr("src", "").addClass("hidden");
+        $("#video-placeholder").removeClass("hidden");
+        $("#analyze-another-btn").addClass("hidden");
+        $("#file-name").text("");
+        $("#max-speed-kmh, #pose-score, #ball-score-display").text("N/A");
+        $("#ball-score-raw").text("模型判定");
+        updateKeyframeImage(
+          "release-frame-img",
+          "release-frame-placeholder",
+          null
+        );
+        updateKeyframeImage(
+          "landing-frame-img",
+          "landing-frame-placeholder",
+          null
+        );
+        updateKeyframeImage(
+          "shoulder-frame-img",
+          "shoulder-frame-placeholder",
+          null
+        );
+        $("#elite-comparison-block").empty();
+        $("#average-comparison-block").empty();
+      }
+
+      function getNestedValue(obj, path) {
+        return path.split(".").reduce((acc, part) => acc && acc[part], obj);
+      }
+
+      function drawBiomechanicsHistoryDensityChart(
+        records,
+        featureKey,
+        currentValue
+      ) {
+        if (densityChartInstance) densityChartInstance.destroy();
+        const ctx = document
+          .getElementById("biomechanicsHistoryDensityChart")
+          .getContext("2d");
+        const values = records
+          .map((r) => getNestedValue(r, `biomechanics_features.${featureKey}`))
+          .filter((v) => v !== undefined && v !== null);
+        if (values.length < 2) {
+          ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+          ctx.font = '16px "Inter", sans-serif';
+          ctx.textAlign = "center";
+          ctx.fillStyle = "#6b7280";
+          ctx.fillText(
+            "數據不足 (少於2筆)，無法進行穩定性分析",
+            ctx.canvas.width / 2,
+            ctx.canvas.height / 2
+          );
+          return;
+        }
+        const min = Math.min(...values),
+          max = Math.max(...values),
+          binCount = 10,
+          binWidth = max - min > 0 ? (max - min) / binCount : 1;
+        const bins = Array(binCount).fill(0),
+          labels = [];
+        let currentBinIndex = -1;
+        for (let i = 0; i < binCount; i++) {
+          const lower = min + i * binWidth,
+            upper = lower + binWidth;
+          labels.push(lower.toFixed(1));
+          values.forEach((v) => {
+            if (v >= lower && v < upper) bins[i]++;
+          });
+          if (currentValue >= lower && currentValue < upper)
+            currentBinIndex = i;
+        }
+        const backgroundColors = bins.map((_, i) =>
+          i === currentBinIndex
+            ? "rgba(239, 68, 68, 0.8)"
+            : "rgba(75, 192, 192, 0.6)"
+        );
+        densityChartInstance = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: featureNames[featureKey],
+                data: bins,
+                backgroundColor: backgroundColors,
+              },
+            ],
+          },
+          options: {
             responsive: true,
             maintainAspectRatio: false,
             scales: {
-                x: {
-                    type: 'linear',
-                    position: 'bottom',
-                    title: {
-                        display: true,
-                        text: '最大球速 (km/h)'
-                    }
-                },
-                y: {
-                    type: 'linear',
-                    position: 'left',
-                    title: {
-                        display: true,
-                        text: '好球/壞球分數 (0-1)'
-                    },
-                    min: 0,
-                    max: 1
-                }
+              y: { beginAtZero: true, title: { display: true, text: "次數" } },
+              x: { title: { display: true, text: "數值區間" } },
             },
-            plugins: {
-                legend: {
-                    position: 'top',
-                },
-                title: {
-                    display: true,
-                    text: '球速與好壞球分數散點圖'
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const record = context.raw;
-                            return `投手: ${record.pitcher_name}, 球速: ${record.x} km/h, 好壞球分數: ${record.y.toFixed(2)}`;
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-        // 特徵名稱翻譯
-        function translateFeatureName(englishName) {
-            const translations = {
-                "Trunk_flexion_excursion": "軀幹屈曲幅度",
-                "Pelvis_obliquity_at_FC": "骨盆傾斜度",
-                "Trunk_rotation_at_BR": "軀幹旋轉",
-                "Shoulder_abduction_at_BR": "肩部外展",
-                "Trunk_flexion_at_BR": "軀幹屈曲",
-                "Trunk_lateral_flexion_at_HS": "軀幹側向屈曲"
-            };
-            return translations[englishName] || englishName;
-        }
-
-        // 選擇紀錄後更新圖表
-        $('#record-selector').on('change', function() {
-            const selectedId = $(this).val();
-            if (selectedId) {
-                const selectedRecord = allHistoryData.find(record => record.id == selectedId);
-                if (selectedRecord) {
-                    drawBiomechanicsRadarChart(selectedRecord.biomechanics_features);
-                    // 當選擇單一紀錄時，預設載入軀幹屈曲幅度到圓餅圖
-                    $('#biomechanics-pie-selector').val('Trunk_flexion_excursion');
-                    $('#biomechanics-pie-selector').trigger('change');
-                    
-                    // 當選擇單一紀錄時，預設載入軀幹屈曲幅度到密度圖
-                    $('#biomechanics-density-selector').val('Trunk_flexion_excursion');
-                    $('#biomechanics-density-selector').trigger('change');
-
-                    // 更新歷史紀錄關鍵影格圖片
-                    updateKeyframeImage('history-release-frame-img', 'history-release-frame-placeholder', selectedRecord.release_frame_url);
-                    updateKeyframeImage('history-landing-frame-img', 'history-landing-frame-placeholder', selectedRecord.landing_frame_url);
-                    updateKeyframeImage('history-shoulder-frame-img', 'history-shoulder-frame-placeholder', selectedRecord.shoulder_frame_url);
-
-                    // 更新散點圖 (標記當前選中的紀錄)
-                    drawSpeedBallScoreScatterChart(allHistoryData, selectedId);
-
-                    // 更新密度圖 (標記當前選中的紀錄)
-                    const selectedDensityFeature = $('#biomechanics-density-selector').val();
-                    if (selectedDensityFeature) {
-                        drawBiomechanicsDensityChart(allHistoryData, selectedDensityFeature, selectedId);
-                    }
-
-                }
-            } else {
-                // 如果沒有選擇紀錄，清除雷達圖
-                drawBiomechanicsRadarChart({});
-                // 清除歷史紀錄關鍵影格圖片
-                updateKeyframeImage('history-release-frame-img', 'history-release-frame-placeholder', null);
-                updateKeyframeImage('history-landing-frame-img', 'history-landing-frame-placeholder', null);
-                updateKeyframeImage('history-shoulder-frame-img', 'history-shoulder-frame-placeholder', null);
-                // 清除密度圖
-                if (biomechanicsDensityChartInstance) {
-                    biomechanicsDensityChartInstance.destroy();
-                }
-                // 清除散點圖
-                drawSpeedBallScoreScatterChart([], null);
-            }
+            plugins: { legend: { display: false } },
+          },
         });
+      }
 
-        // 圓餅圖選擇特徵後更新圖表
-        $('#biomechanics-pie-selector').on('change', function() {
-            const selectedFeature = $(this).val();
-            const selectedRecordId = $('#record-selector').val();
-
-            if (!selectedRecordId) {
-                showCustomModal('請先選擇一個歷史紀錄', 'alert');
-                $(this).val(''); // 重置選擇
-                return;
-            }
-
-            if (selectedFeature) {
-                const selectedRecord = allHistoryData.find(record => record.id == selectedRecordId);
-                if (selectedRecord && selectedRecord.biomechanics_features && selectedRecord.biomechanics_features[selectedFeature] !== undefined) {
-                    const featureValue = selectedRecord.biomechanics_features[selectedFeature];
-                    drawBiomechanicsPieChart(selectedFeature, featureValue);
-                } else {
-                    showCustomModal('所選紀錄無此特徵數據', 'alert');
-                    if (biomechanicsPieChartInstance) {
-                        biomechanicsPieChartInstance.destroy();
-                    }
-                }
-            } else {
-                if (biomechanicsPieChartInstance) {
-                    biomechanicsPieChartInstance.destroy();
-                }
-            }
+      function drawTimeSeriesChart(records, metric) {
+        if (timeSeriesChartInstance) timeSeriesChartInstance.destroy();
+        const ctx = document.getElementById("timeSeriesChart").getContext("2d");
+        const data = records
+          .map((r) => ({
+            x: new Date(r.created_at),
+            y: getNestedValue(r, metric.key),
+          }))
+          .sort((a, b) => a.x - b.x);
+        timeSeriesChartInstance = new Chart(ctx, {
+          type: "line",
+          data: {
+            datasets: [
+              {
+                label: metric.name,
+                data: data,
+                borderColor: "rgba(239, 68, 68, 1)",
+                tension: 0.1,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: {
+                type: "time",
+                time: { unit: "day" },
+                title: { display: true, text: "日期" },
+              },
+              y: { title: { display: true, text: "數值" } },
+            },
+          },
         });
+      }
 
-        // 密度圖選擇特徵後更新圖表
-        $('#biomechanics-density-selector').on('change', function() {
-            const selectedFeature = $(this).val();
-            const selectedRecordId = $('#record-selector').val();
+      function drawCorrelationExplorerChart(
+        records,
+        metricX,
+        metricY,
+        currentId
+      ) {
+        if (correlationChartInstance) correlationChartInstance.destroy();
 
-            if (!selectedRecordId) {
-                showCustomModal('請先選擇一個歷史紀錄', 'alert');
-                $(this).val(''); // 重置選擇
-                return;
-            }
+        const otherData = records
+          .filter((r) => r.id !== currentId)
+          .map((r) => ({
+            x: getNestedValue(r, metricX.key),
+            y: getNestedValue(r, metricY.key),
+            recordId: r.id,
+          }));
 
-            if (selectedFeature) {
-                drawBiomechanicsDensityChart(allHistoryData, selectedFeature, selectedRecordId);
-            } else {
-                if (biomechanicsDensityChartInstance) {
-                    biomechanicsDensityChartInstance.destroy();
-                }
-            }
+        const currentPoint = records.find((r) => r.id === currentId);
+        const currentData = currentPoint
+          ? [
+              {
+                x: getNestedValue(currentPoint, metricX.key),
+                y: getNestedValue(currentPoint, metricY.key),
+                recordId: currentPoint.id,
+              },
+            ]
+          : [];
+
+        const ctx = document
+          .getElementById("correlationExplorerChart")
+          .getContext("2d");
+        correlationChartInstance = new Chart(ctx, {
+          type: "scatter",
+          data: {
+            datasets: [
+              {
+                label: "歷史紀錄",
+                data: otherData,
+                backgroundColor: "rgba(54, 162, 235, 0.6)",
+              },
+              {
+                label: "當前紀錄",
+                data: currentData,
+                backgroundColor: "rgba(239, 68, 68, 1)",
+                pointRadius: 8,
+                pointHoverRadius: 10,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: { title: { display: true, text: metricX.name } },
+              y: { title: { display: true, text: metricY.name } },
+            },
+            onHover: (e, el, c) => {
+              c.canvas.style.cursor = el[0] ? "pointer" : "default";
+            },
+            onClick: (e, el, c) => {
+              if (el.length === 0) return;
+              const dataPoint =
+                c.data.datasets[el[0].datasetIndex].data[el[0].index];
+              const record = allHistoryData.find(
+                (r) => r.id === dataPoint.recordId
+              );
+              if (record) {
+                $("#player-name-input").val(record.player_name);
+                displayHistoryList(record.player_name);
+                replay_record(record);
+                $("#historyChartsModal").hide();
+              }
+            },
+          },
         });
+      }
 
-        // 更新好球/壞球分數排行榜
-        function updateBallScoreRanking(recordsToRank = allHistoryData) {
-            const rankingDiv = $('#ball-score-ranking');
-            rankingDiv.empty();
-            rankingDiv.append('<p class="text-gray-500 text-center">根據好球分數高低排序</p>');
+      function pearsonCorrelation(x, y) {
+        let n = x.length;
+        if (n === 0 || y.length !== n) return 0;
 
-            // 過濾掉沒有 ball_score 的紀錄，並按 ball_score 降序排序
-            const rankedRecords = recordsToRank
-                .filter(record => record.ball_score !== undefined)
-                .sort((a, b) => b.ball_score - a.ball_score);
-
-            if (rankedRecords.length === 0) {
-                rankingDiv.append('<p class="text-gray-500 text-center">目前沒有好球/壞球分數紀錄。</p>');
-            } else {
-                rankedRecords.forEach((record, index) => {
-                    const ballScoreStatus = record.ball_score > 0.5 ? '好球' : '壞球';
-                    const recordElement = `
-                        <div class="border border-gray-200 rounded-lg p-3 shadow-sm flex justify-between items-center bg-white">
-                            <div>
-                                <p class="text-sm font-semibold">#${index + 1} 分析 ID: ${record.id}</p>
-                                <p class="text-sm text-gray-600">投手: ${record.pitcher_name || 'N/A'}</p>
-                                <p class="text-sm text-gray-600">分數: ${record.ball_score.toFixed(2)} (${ballScoreStatus})</p>
-                            </div>
-                        </div>
-                    `;
-                    rankingDiv.append(recordElement);
-                });
-            }
+        let sumX = 0,
+          sumY = 0,
+          sumXY = 0,
+          sumX2 = 0,
+          sumY2 = 0;
+        let validCount = 0;
+        for (let i = 0; i < n; i++) {
+          if (typeof x[i] !== "number" || typeof y[i] !== "number") continue;
+          validCount++;
+          sumX += x[i];
+          sumY += y[i];
+          sumXY += x[i] * y[i];
+          sumX2 += x[i] * x[i];
+          sumY2 += y[i] * y[i];
         }
 
+        if (validCount < 2) return NaN; // Not enough data points to correlate
+        let num = validCount * sumXY - sumX * sumY;
+        let den = Math.sqrt(
+          (validCount * sumX2 - sumX * sumX) *
+            (validCount * sumY2 - sumY * sumY)
+        );
+
+        if (den === 0) return 0;
+        return num / den;
+      }
+
+      function calculateCorrelationMatrix(records, metrics) {
+        const labels = metrics.map((m) => m.name);
+        const matrix = Array(metrics.length)
+          .fill(0)
+          .map(() => Array(metrics.length).fill(0));
+
+        for (let i = 0; i < metrics.length; i++) {
+          for (let j = 0; j < metrics.length; j++) {
+            // Calculate for the full matrix
+            const aligned1 = [],
+              aligned2 = [];
+            for (let k = 0; k < records.length; k++) {
+              const v1 = getNestedValue(records[k], metrics[i].key);
+              const v2 = getNestedValue(records[k], metrics[j].key);
+              if (v1 != null && v2 != null) {
+                aligned1.push(v1);
+                aligned2.push(v2);
+              }
+            }
+
+            if (aligned1.length < 2) {
+              matrix[i][j] = NaN;
+            } else {
+              matrix[i][j] = pearsonCorrelation(aligned1, aligned2);
+            }
+          }
+        }
+        return { labels, matrix };
+      }
+
+      function getCorrelationColor(value) {
+        if (isNaN(value)) return "rgba(200, 200, 200, 0.1)";
+        const alpha = Math.min(Math.abs(value) * 0.9 + 0.1, 1);
+        if (value === 1) return `rgba(120, 120, 120, 0.2)`;
+        return value > 0
+          ? `rgba(54, 162, 235, ${alpha})`
+          : `rgba(255, 99, 132, ${alpha})`;
+      }
+
+      function drawCorrelationHeatmap(records) {
+        const container = $("#correlationTableContainer");
+        const messageEl = $("#heatmap-message");
+        container.empty(); // Clear previous table
+
+        if (records.length < 2) {
+          container.hide();
+          messageEl
+            .text("歷史紀錄少於2筆，無法產生關聯性矩陣。")
+            .removeClass("hidden");
+          return;
+        }
+
+        messageEl.addClass("hidden");
+        container.show();
+
+        const { labels, matrix } = calculateCorrelationMatrix(
+          records,
+          chartMetrics
+        );
+
+        const table = $('<table class="correlation-table"></table>');
+        const thead = $("<thead></thead>");
+        const tbody = $("<tbody></tbody>");
+
+        // Header Row
+        const headerRow = $("<tr></tr>");
+        headerRow.append('<th class="corner"></th>'); // Top-left corner
+        labels.forEach((label) => {
+          headerRow.append(`<th>${label}</th>`);
+        });
+        thead.append(headerRow);
+
+        // Body Rows
+        labels.forEach((rowLabel, i) => {
+          const row = $("<tr></tr>");
+          row.append(`<th class="row-header">${rowLabel}</th>`); // Row header
+          labels.forEach((colLabel, j) => {
+            const value = matrix[i][j];
+            const cell = $("<td></td>");
+            cell.text(isNaN(value) ? "N/A" : value.toFixed(2));
+            const bgColor = getCorrelationColor(value);
+            cell.css("background-color", bgColor);
+            // Set text color for contrast
+            if (!isNaN(value) && Math.abs(value) > 0.4) {
+              cell.css("color", "white");
+            }
+            row.append(cell);
+          });
+          tbody.append(row);
+        });
+
+        table.append(thead).append(tbody);
+        container.append(table);
+      }
+
+      function drawPostureAnalysisTable(records) {
+        const container = $("#postureAnalysisTableContainer");
+        const messageEl = $("#posture-analysis-message");
+        container.empty();
+
+        const goodBalls = records.filter(
+          (r) => r.ball_score > 0.5 && r.biomechanics_features
+        );
+        const badBalls = records.filter(
+          (r) => r.ball_score <= 0.5 && r.biomechanics_features
+        );
+
+        if (goodBalls.length === 0 || badBalls.length === 0) {
+          container.hide();
+          messageEl
+            .text("好球或壞球的數據不足，無法進行比較分析。")
+            .removeClass("hidden");
+          return;
+        }
+
+        messageEl.addClass("hidden");
+        container.show();
+
+        const biomechanicsKeys = Object.keys(keyMap);
+        const table = $('<table class="data-table"></table>');
+        const thead = $(
+          "<thead><tr><th>指標名稱</th><th>好球平均值</th><th>壞球平均值</th><th>差異</th></tr></thead>"
+        );
+        const tbody = $("<tbody></tbody>");
+
+        const calcAverage = (data, key) => {
+          const values = data
+            .map((r) => r.biomechanics_features[key])
+            .filter((v) => v !== null && v !== undefined);
+          if (values.length === 0) return NaN;
+          return values.reduce((a, b) => a + b, 0) / values.length;
+        };
+
+        biomechanicsKeys.forEach((key) => {
+          const goodAvg = calcAverage(goodBalls, key);
+          const badAvg = calcAverage(badBalls, key);
+          const diff = isNaN(goodAvg) || isNaN(badAvg) ? NaN : badAvg - goodAvg;
+
+          const row = $("<tr></tr>");
+          row.append(`<th>${featureNames[key]}</th>`);
+          row.append(`<td>${isNaN(goodAvg) ? "N/A" : goodAvg.toFixed(2)}</td>`);
+          row.append(`<td>${isNaN(badAvg) ? "N/A" : badAvg.toFixed(2)}</td>`);
+          const diffCell = $(
+            `<td>${isNaN(diff) ? "N/A" : diff.toFixed(2)}</td>`
+          );
+          if (!isNaN(diff)) {
+            if (diff > 0.5)
+              diffCell.css({ "background-color": "rgba(255, 99, 132, 0.3)" });
+            if (diff < -0.5)
+              diffCell.css({ "background-color": "rgba(54, 162, 235, 0.3)" });
+          }
+          row.append(diffCell);
+          tbody.append(row);
+        });
+
+        table.append(thead).append(tbody);
+        container.append(table);
+      }
+
+      $(document).ready(function () {
+        fetchHistory();
+        fetchBenchmarkModels();
+
+        $("#video-upload-area, #analyze-another-btn").on("click", () =>
+          $("#video-upload").click()
+        );
+
+        $("#video-upload").on("change", async function (e) {
+          const file = e.target.files[0];
+          if (!file) return;
+          $("#file-name").text(`已選擇: ${file.name}`);
+          const playerName = $("#player-name-input").val().trim();
+          if (!playerName) {
+            alert("請輸入投手名稱！");
+            $(this).val("");
+            return;
+          }
+          const benchmarkName = $("#benchmark-model-select").val();
+          const compareAverage = $("#compare-user-average").is(":checked");
+          analyzeVideo(file, playerName, benchmarkName, compareAverage);
+        });
+
+        $(
+          "#closeDetailModal, #closeHistoryChartsModal, #closeImageModalBtn"
+        ).on("click", function () {
+          $(this).closest(".modal").hide();
+        });
+
+        $("#imageModal").on("click", function (e) {
+          if (e.target.id === "imageModal") {
+            $(this).hide();
+          }
+        });
+
+        $("#history-records")
+          .on("click", ".view-btn", function () {
+            const record = allHistoryData.find(
+              (r) => r.id === $(this).data("id")
+            );
+            if (record) {
+              const formattedHtml = formatRecordDetails(record);
+              $("#detailModalContent").html(formattedHtml);
+              $("#detailModal").css("display", "flex");
+            }
+          })
+          .on("click", ".replay-btn", function () {
+            const record = allHistoryData.find(
+              (r) => r.id === $(this).data("id")
+            );
+            if (record) {
+              $("#player-name-input").val(record.player_name);
+              displayHistoryList(record.player_name);
+              replay_record(record);
+            }
+          });
+
+        $(document).on(
+          "click",
+          "#release-frame-img, #landing-frame-img, #shoulder-frame-img",
+          function () {
+            const imageUrl = $(this).attr("src");
+            if (imageUrl) {
+              $("#modalImage").attr("src", imageUrl);
+              $("#imageModal").css("display", "flex");
+            }
+          }
+        );
+
+        $("#player-name-input").on("input", function () {
+          displayHistoryList($(this).val());
+        });
+
+        $("#benchmark-model-select").on("change", function () {
+          if (!currentRecord) {
+            $(this).val("");
+            alert("請先分析或回放一筆紀錄，才能選擇比對標竿。");
+            return;
+          }
+          const selectedModelName = $(this).val();
+          const eliteProfile = benchmarkProfiles[selectedModelName];
+          renderComparisonBlock(
+            eliteProfile,
+            currentRecord.biomechanics_features,
+            $("#elite-comparison-block")
+          );
+        });
+
+        $("#compare-user-average").on("change", function () {
+          if (!currentRecord) {
+            alert("請先分析或回放一筆紀錄，才能進行個人歷史比對。");
+            $(this).prop("checked", false);
+            return;
+          }
+          if ($(this).is(":checked")) {
+            fetchAndRenderUserAverage();
+          } else {
+            $("#average-comparison-block").empty();
+          }
+        });
+
+        $("#view-history-charts-btn").on("click", function () {
+          if (!currentRecord) {
+            alert("請先選擇一筆紀錄以進行趨勢分析。");
+            return;
+          }
+          const getSnapshotData = () => {
+            if (!currentRecord) return [[]];
+            const ts = new Date(currentRecord.created_at);
+            const snapshot = allHistoryData.filter(
+              (r) => new Date(r.created_at) <= ts
+            );
+            let pitcherName = currentRecord.player_name;
+            return [snapshot.filter((r) => r.player_name === pitcherName)];
+          };
+          const [records] = getSnapshotData();
+          if (records.length === 0) {
+            alert("該投手在選定時間點沒有歷史數據可供分析");
+            return;
+          }
+          $("#modal-tabs .tab-button:first").click();
+          $(".chart-selector").empty();
+          chartMetrics.forEach((m) => {
+            $("#time-series-metric, #corr-x-axis, #corr-y-axis").append(
+              `<option value='${JSON.stringify(m)}'>${m.name}</option>`
+            );
+          });
+          Object.keys(featureNames).forEach((key) => {
+            $("#history-density-selector").append(
+              `<option value='${key}'>${featureNames[key]}</option>`
+            );
+          });
+
+          $("#corr-x-axis").val(JSON.stringify(chartMetrics[0]));
+          $("#corr-y-axis").val(JSON.stringify(chartMetrics[2]));
+
+          // 繪製圖表
+          drawTimeSeriesChart(records, chartMetrics[0]);
+          drawCorrelationExplorerChart(
+            records,
+            JSON.parse($("#corr-x-axis").val()),
+            JSON.parse($("#corr-y-axis").val()),
+            currentRecord.id
+          );
+
+          const selectedDensityMetric = $("#history-density-selector").val();
+          if (selectedDensityMetric) {
+            drawBiomechanicsHistoryDensityChart(
+              records,
+              selectedDensityMetric,
+              getNestedValue(
+                currentRecord,
+                `biomechanics_features.${selectedDensityMetric}`
+              )
+            );
+          }
+
+          drawCorrelationHeatmap(records);
+          drawPostureAnalysisTable(records);
+
+          $("#historyChartsModal").css("display", "flex");
+        });
+
+        $("#modal-tabs").on("click", ".tab-button", function () {
+          $(this).addClass("active").siblings().removeClass("active");
+          $(".tab-content").removeClass("active");
+          $(`#${$(this).data("tab")}-tab`).addClass("active");
+        });
+
+        const redrawModalCharts = (event) => {
+          if (!currentRecord) return;
+          const getSnapshotData = () => {
+            if (!currentRecord) return [[]];
+            const ts = new Date(currentRecord.created_at);
+            const snapshot = allHistoryData.filter(
+              (r) => new Date(r.created_at) <= ts
+            );
+            let pitcherName = currentRecord.player_name;
+            return [snapshot.filter((r) => r.player_name === pitcherName)];
+          };
+          const [records] = getSnapshotData();
+          if (records.length === 0) return;
+          const id = event.target.id;
+          if (id === "corr-x-axis" || id === "corr-y-axis") {
+            drawCorrelationExplorerChart(
+              records,
+              JSON.parse($("#corr-x-axis").val()),
+              JSON.parse($("#corr-y-axis").val()),
+              currentRecord.id
+            );
+          } else if (id === "time-series-metric") {
+            drawTimeSeriesChart(
+              records,
+              JSON.parse($("#time-series-metric").val())
+            );
+          } else if (id === "history-density-selector") {
+            const key = $("#history-density-selector").val();
+            drawBiomechanicsHistoryDensityChart(
+              records,
+              key,
+              getNestedValue(currentRecord, `biomechanics_features.${key}`)
+            );
+          }
+        };
+
+        $(
+          "#time-series-metric, #corr-x-axis, #corr-y-axis, #history-density-selector"
+        ).on("change", redrawModalCharts);
+      });
     </script>
-</body>
+  </body>
 </html>
